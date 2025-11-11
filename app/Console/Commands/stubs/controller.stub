@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Services\{{ServiceName}};
+use Illuminate\Http\Request;
+
+class {{ControllerName}} extends Controller
+{
+    protected $service;
+
+    public function __construct({{ServiceName}} $service)
+    {
+        $this->service = $service;
+    }
+
+    public function index()
+    {
+        $items = $this->service->getAll();
+        return view('{{viewPath}}.index', compact('items'));
+    }
+
+    public function create()
+    {
+        return view('{{viewPath}}.create');
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate({{ServiceName}}::getCreateRules());
+        $this->service->create($validated);
+        return redirect()->route('{{routeName}}.index')->with('success', 'Created successfully.');
+    }
+
+    public function show($id)
+    {
+        $item = $this->service->getById($id);
+        return view('{{viewPath}}.show', compact('item'));
+    }
+
+    public function edit($id)
+    {
+        $item = $this->service->getById($id);
+        return view('{{viewPath}}.edit', compact('item'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $item = $this->service->getById($id);
+        $validated = $request->validate({{ServiceName}}::getUpdateRules($item));
+        $this->service->update($id, $validated);
+        return redirect()->route('{{routeName}}.index')->with('success', 'Updated successfully.');
+    }
+
+    public function destroy($id)
+    {
+        $this->service->delete($id);
+        return redirect()->route('{{routeName}}.index')->with('success', 'Deleted successfully.');
+    }
+}
+

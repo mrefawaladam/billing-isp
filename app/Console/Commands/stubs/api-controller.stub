@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Responses\ApiResponse;
+use App\Services\{{ServiceName}};
+use Illuminate\Http\Request;
+
+class {{ControllerName}} extends Controller
+{
+    protected $service;
+
+    public function __construct({{ServiceName}} $service)
+    {
+        $this->service = $service;
+    }
+
+    public function index(Request $request)
+    {
+        $items = $this->service->getAll($request->all());
+        return ApiResponse::paginated($items);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate({{ServiceName}}::getCreateRules());
+        $item = $this->service->create($validated);
+        return ApiResponse::success($item, 'Created successfully', 201);
+    }
+
+    public function show($id)
+    {
+        $item = $this->service->getById($id);
+        if (!$item) {
+            return ApiResponse::notFound();
+        }
+        return ApiResponse::success($item);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $item = $this->service->getById($id);
+        if (!$item) {
+            return ApiResponse::notFound();
+        }
+        $validated = $request->validate({{ServiceName}}::getUpdateRules($item));
+        $this->service->update($id, $validated);
+        return ApiResponse::success($item->fresh(), 'Updated successfully');
+    }
+
+    public function destroy($id)
+    {
+        $item = $this->service->getById($id);
+        if (!$item) {
+            return ApiResponse::notFound();
+        }
+        $this->service->delete($id);
+        return ApiResponse::success(null, 'Deleted successfully');
+    }
+}
+

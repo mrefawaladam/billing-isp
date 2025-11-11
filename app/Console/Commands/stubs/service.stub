@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\{{ModelName}};
+use App\Services\CRUDService;
+
+class {{ServiceName}} extends CRUDService
+{
+    public function __construct()
+    {
+        parent::__construct(new {{ModelName}}());
+    }
+
+    /**
+     * Get validation rules for create
+     */
+    public static function getCreateRules(): array
+    {
+        return [
+            // Add validation rules here
+        ];
+    }
+
+    /**
+     * Get validation rules for update
+     */
+    public static function getUpdateRules($model): array
+    {
+        return [
+            // Add validation rules here
+        ];
+    }
+}
+

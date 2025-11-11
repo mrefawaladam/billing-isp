@@ -1,0 +1,29 @@
+@extends('layouts.app')
+
+@section('title', '{{ModelName}} Management')
+
+@section('content')
+<x-layout.page-header
+    title="{{ModelName}} Management"
+    :breadcrumb-title="'{{ModelName}} Management'"
+/>
+
+<x-ui.toast-notification />
+
+<div class="datatables">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h4 class="card-title">{{ModelName}}</h4>
+                </div>
+                <button type="button" class="btn btn-primary" id="btn-create">
+                    <i class="ti ti-plus me-1"></i> Add New
+                </button>
+            </div>
+            <!-- Add your table here -->
+        </div>
+    </div>
+</div>
+@endsection
+
