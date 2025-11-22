@@ -20,17 +20,16 @@ class FormHelper {
             return;
         }
 
-        const formData = form.serialize();
         const formAction = form.attr('action');
         const formMethod = form.find('input[name="_method"]').val() || form.attr('method') || 'POST';
-
-        // Clear previous errors
-        this.clearErrors(form);
-
-        $.ajax({
+        
+        // Check if form has file inputs
+        const hasFileInputs = form.find('input[type="file"]').length > 0;
+        
+        let formData;
+        let ajaxOptions = {
             url: formAction,
             method: formMethod === 'PUT' || formMethod === 'PATCH' ? 'POST' : formMethod,
-            data: formData + (formMethod === 'PUT' || formMethod === 'PATCH' ? `&_method=${formMethod}` : ''),
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') || $('input[name="_token"]').val(),
@@ -65,7 +64,34 @@ class FormHelper {
                     options.error(xhr);
                 }
             }
-        });
+        };
+
+        // Clear previous errors
+        this.clearErrors(form);
+
+        // Handle file uploads
+        if (hasFileInputs) {
+            // Use FormData for file uploads
+            formData = new FormData(form[0]);
+            
+            // Add _method for PUT/PATCH requests
+            if (formMethod === 'PUT' || formMethod === 'PATCH') {
+                formData.append('_method', formMethod);
+            }
+            
+            ajaxOptions.data = formData;
+            ajaxOptions.processData = false;
+            ajaxOptions.contentType = false;
+        } else {
+            // Use serialize for regular forms
+            formData = form.serialize();
+            if (formMethod === 'PUT' || formMethod === 'PATCH') {
+                formData += `&_method=${formMethod}`;
+            }
+            ajaxOptions.data = formData;
+        }
+
+        $.ajax(ajaxOptions);
     }
 
     /**

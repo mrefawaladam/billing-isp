@@ -53,11 +53,27 @@ class RolePermissionSeeder extends Seeder
             Permission::firstOrCreate(['name' => $permission]);
         }
 
+        // Add Field Officer permissions
+        $fieldOfficerPermissions = [
+            'payment.create',
+            'payment.update',
+            'payment.view',
+            'customer.view',
+            'customer.list',
+            'invoice.view',
+            'invoice.list',
+        ];
+
+        foreach ($fieldOfficerPermissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission]);
+        }
+
         // Create roles
         $admin = Role::firstOrCreate(['name' => 'admin']);
         $manager = Role::firstOrCreate(['name' => 'manager']);
         $user = Role::firstOrCreate(['name' => 'user']);
         $moderator = Role::firstOrCreate(['name' => 'moderator']);
+        $staff = Role::firstOrCreate(['name' => 'staff']);
 
         // Assign all permissions to admin
         $admin->givePermissionTo(Permission::all());
@@ -89,8 +105,19 @@ class RolePermissionSeeder extends Seeder
             'chat.create',
         ]);
 
+        // Assign permissions to staff (field officer)
+        $staff->givePermissionTo([
+            'payment.create',
+            'payment.update',
+            'payment.view',
+            'customer.view',
+            'customer.list',
+            'invoice.view',
+            'invoice.list',
+        ]);
+
         $this->command->info('Roles and Permissions seeded successfully!');
-        $this->command->info('Created Roles: Admin, Manager, Moderator, User');
+        $this->command->info('Created Roles: Admin, Manager, Moderator, User, Staff');
         $this->command->info('Created ' . count($permissions) . ' permissions');
     }
 }

@@ -4,7 +4,7 @@
     <div>
       <div class="brand-logo d-flex align-items-center">
         <a href="{{ route('dashboard') }}" class="text-nowrap logo-img">
-          <img src="{{ asset('assets/images/logos/logo.svg') }}" alt="Logo" />
+          <img src="{{ asset('logo.png') }}" alt="Logo" style="max-height: 35px; width: auto;" />
         </a>
       </div>
 
@@ -24,50 +24,13 @@
             </a>
           </li>
 
-          <!-- Apps -->
+          <!-- Management -->
           <li>
             <span class="sidebar-divider lg"></span>
           </li>
           <li class="nav-small-cap">
             <iconify-icon icon="solar:menu-dots-linear" class="mini-icon"></iconify-icon>
-            <span class="hide-menu">Apps</span>
-          </li>
-
-          <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('chat.index') }}">
-              <iconify-icon icon="solar:chat-round-line-line-duotone"></iconify-icon>
-              <span class="hide-menu">Chat</span>
-            </a>
-          </li>
-
-          <li class="sidebar-item">
-            <a class="sidebar-link" href="#">
-              <iconify-icon icon="solar:letter-line-duotone"></iconify-icon>
-              <span class="hide-menu">Email</span>
-            </a>
-          </li>
-
-          <li class="sidebar-item">
-            <a class="sidebar-link" href="#">
-              <iconify-icon icon="solar:calendar-mark-line-duotone"></iconify-icon>
-              <span class="hide-menu">Calendar</span>
-            </a>
-          </li>
-
-          <li class="sidebar-item">
-            <a class="sidebar-link" href="#">
-              <iconify-icon icon="solar:document-text-line-duotone"></iconify-icon>
-              <span class="hide-menu">Notes</span>
-            </a>
-          </li>
-
-          <!-- Pages -->
-          <li>
-            <span class="sidebar-divider lg"></span>
-          </li>
-          <li class="nav-small-cap">
-            <iconify-icon icon="solar:menu-dots-linear" class="mini-icon"></iconify-icon>
-            <span class="hide-menu">Pages</span>
+            <span class="hide-menu">Manajemen</span>
           </li>
 
           <li class="sidebar-item">
@@ -78,11 +41,66 @@
           </li>
 
           <li class="sidebar-item">
-            <a href="{{ route('blank') }}" class="sidebar-link">
-              <iconify-icon icon="solar:document-text-line-duotone"></iconify-icon>
-              <span class="hide-menu">Blank Page</span>
+            <a class="sidebar-link" href="{{ route('customers.index') }}">
+              <iconify-icon icon="solar:user-id-line-duotone"></iconify-icon>
+              <span class="hide-menu">Customer Management</span>
             </a>
           </li>
+
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('invoices.index') }}">
+              <iconify-icon icon="solar:document-text-line-duotone"></iconify-icon>
+              <span class="hide-menu">Invoice Management</span>
+            </a>
+          </li>
+
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('map.index') }}">
+              <iconify-icon icon="solar:map-point-line-duotone"></iconify-icon>
+              <span class="hide-menu">Peta Lokasi</span>
+            </a>
+          </li>
+
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('payments.report') }}">
+              <iconify-icon icon="solar:document-medicine-line-duotone"></iconify-icon>
+              <span class="hide-menu">Laporan Pembayaran</span>
+            </a>
+          </li>
+
+          <!-- Field Officer Section (Only for Staff Role) -->
+          @auth
+          @if(auth()->user()->hasRole('staff'))
+          <li>
+            <span class="sidebar-divider lg"></span>
+          </li>
+          <li class="nav-small-cap">
+            <iconify-icon icon="solar:menu-dots-linear" class="mini-icon"></iconify-icon>
+            <span class="hide-menu">Tim Staff</span>
+          </li>
+
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('field-officer.dashboard') }}">
+              <iconify-icon icon="solar:widget-add-line-duotone"></iconify-icon>
+              <span class="hide-menu">Dashboard Staff</span>
+            </a>
+          </li>
+
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('field-officer.customers') }}">
+              <iconify-icon icon="solar:user-id-line-duotone"></iconify-icon>
+              <span class="hide-menu">Daftar Pelanggan</span>
+            </a>
+          </li>
+
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('field-officer.map') }}">
+              <iconify-icon icon="solar:map-point-line-duotone"></iconify-icon>
+              <span class="hide-menu">Peta Lokasi</span>
+            </a>
+          </li>
+          @endif
+          @endauth
 
           <!-- Auth -->
           <li>

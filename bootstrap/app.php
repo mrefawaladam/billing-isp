@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'session.timeout' => \App\Http\Middleware\SessionTimeout::class,
+            'staff' => \App\Http\Middleware\EnsureUserIsStaff::class,
+            'staff.api' => \App\Http\Middleware\EnsureUserIsStaffApi::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

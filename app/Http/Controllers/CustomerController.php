@@ -1,0 +1,263 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Customer;
+use App\Models\User;
+use App\Services\CustomerService;
+use Illuminate\Http\Request;
+use Yajra\DataTables\Facades\DataTables;
+
+class CustomerController extends Controller
+{
+    protected $customerService;
+
+    public function __construct(CustomerService $customerService)
+    {
+        $this->customerService = $customerService;
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        if ($request->ajax()) {
+            $query = Customer::with('assignedUser')->select('customers.*');
+
+            // Filter berdasarkan type
+            if ($request->filled('type') && $request->type !== null && $request->type !== '') {
+                $query->where('type', $request->type);
+            }
+
+            // Filter berdasarkan assigned_to
+            if ($request->filled('assigned_to') && $request->assigned_to !== null && $request->assigned_to !== '') {
+                $query->where('assigned_to', $request->assigned_to);
+            }
+
+            // Filter berdasarkan active
+            if ($request->filled('active') && $request->active !== null && $request->active !== '') {
+                $query->where('active', $request->active === '1' || $request->active === 1);
+            }
+
+            return DataTables::of($query)
+                ->addColumn('assigned_user', function ($customer) {
+                    return $customer->assignedUser ? $customer->assignedUser->name : '-';
+                })
+                ->addColumn('type_badge', function ($customer) {
+                    $badges = [
+                        'rumahan' => 'bg-primary',
+                        'kantor' => 'bg-success',
+                        'sekolah' => 'bg-info',
+                        'free' => 'bg-secondary',
+                    ];
+                    $badge = $badges[$customer->type] ?? 'bg-secondary';
+                    return '<span class="badge ' . $badge . '">' . ucfirst($customer->type) . '</span>';
+                })
+                ->addColumn('status_badge', function ($customer) {
+                    $badge = $customer->active ? 'bg-success' : 'bg-danger';
+                    $text = $customer->active ? 'Aktif' : 'Tidak Aktif';
+                    return '<span class="badge ' . $badge . '">' . $text . '</span>';
+                })
+                ->addColumn('total_fee_formatted', function ($customer) {
+                    return 'Rp ' . number_format($customer->total_fee ?? 0, 0, ',', '.');
+                })
+                ->addColumn('action', function ($customer) {
+                    return view('features.customers.partials.action-buttons', compact('customer'))->render();
+                })
+                ->editColumn('customer_code', function ($customer) {
+                    return $customer->customer_code ?? '-';
+                })
+                ->editColumn('phone', function ($customer) {
+                    return $customer->phone ?? '-';
+                })
+                ->editColumn('created_at', function ($customer) {
+                    return $customer->created_at ? $customer->created_at->format('d/m/Y') : '-';
+                })
+                ->filterColumn('assigned_user', function ($query, $keyword) {
+                    $query->whereHas('assignedUser', function ($q) use ($keyword) {
+                        $q->where('name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->rawColumns(['type_badge', 'status_badge', 'action'])
+                ->make(true);
+        }
+
+        $users = User::whereHas('roles', function ($query) {
+            $query->whereIn('name', ['admin', 'manager']);
+        })->orWhere('email', 'like', '%penagih%')->get();
+
+        return view('features.customers.index', compact('users'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        $users = User::whereHas('roles', function ($query) {
+            $query->whereIn('name', ['admin', 'manager']);
+        })->orWhere('email', 'like', '%penagih%')->get();
+
+        return response()->json([
+            'html' => view('features.customers.partials.form', [
+                'users' => $users,
+                'customer' => null,
+                'formAction' => route('customers.store'),
+                'formMethod' => 'POST',
+                'modalTitle' => 'Tambah Pelanggan Baru'
+            ])->render()
+        ]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        try {
+            $validated = $request->validate(CustomerService::getCreateRules());
+
+            $housePhoto = $request->hasFile('house_photo') ? $request->file('house_photo') : null;
+            $this->customerService->create($validated, $housePhoto);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Pelanggan berhasil ditambahkan.'
+                ]);
+            }
+
+            return redirect()->route('customers.index')
+                ->with('success', 'Pelanggan berhasil ditambahkan.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal.',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->withErrors($e->validator)
+                ->withInput();
+        }
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Customer $customer)
+    {
+        $customer->load('assignedUser', 'devices', 'invoices');
+        $users = User::whereHas('roles', function ($query) {
+            $query->whereIn('name', ['admin', 'manager']);
+        })->orWhere('email', 'like', '%penagih%')->get();
+
+        if (request()->ajax()) {
+            return response()->json([
+                'html' => view('features.customers.partials.show', compact('customer', 'users'))->render()
+            ]);
+        }
+
+        return redirect()->route('customers.index');
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Customer $customer)
+    {
+        $users = User::whereHas('roles', function ($query) {
+            $query->whereIn('name', ['admin', 'manager']);
+        })->orWhere('email', 'like', '%penagih%')->get();
+
+        return response()->json([
+            'html' => view('features.customers.partials.form', [
+                'users' => $users,
+                'customer' => $customer,
+                'formAction' => route('customers.update', $customer),
+                'formMethod' => 'PUT',
+                'modalTitle' => 'Edit Pelanggan'
+            ])->render()
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Customer $customer)
+    {
+        try {
+            $validated = $request->validate(CustomerService::getUpdateRules($customer));
+
+            // Pastikan discount selalu ada dan tidak null
+            if (!isset($validated['discount']) || $validated['discount'] === null || $validated['discount'] === '') {
+                $validated['discount'] = 0;
+            }
+
+            $housePhoto = $request->hasFile('house_photo') ? $request->file('house_photo') : null;
+            $this->customerService->update($customer, $validated, $housePhoto);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Pelanggan berhasil diperbarui.'
+                ]);
+            }
+
+            return redirect()->route('customers.index')
+                ->with('success', 'Pelanggan berhasil diperbarui.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal.',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->withErrors($e->validator)
+                ->withInput();
+        }
+    }
+
+    /**
+     * Show device management for customer
+     */
+    public function devices(Customer $customer)
+    {
+        if (request()->ajax()) {
+            return response()->json([
+                'html' => view('features.customers.partials.device-management', [
+                    'customerId' => $customer->id
+                ])->render()
+            ]);
+        }
+
+        return view('features.customers.partials.device-management', [
+            'customerId' => $customer->id
+        ]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Customer $customer)
+    {
+        $this->customerService->delete($customer);
+
+        if (request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Pelanggan berhasil dihapus.'
+            ]);
+        }
+
+        return redirect()->route('customers.index')
+            ->with('success', 'Pelanggan berhasil dihapus.');
+    }
+}
+

@@ -31,9 +31,8 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
         return redirect()->route('dashboard');
     });
 
-    Route::get('/dashboard', function () {
-        return view('pages.dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/export', [\App\Http\Controllers\DashboardController::class, 'export'])->name('dashboard.export');
 
     Route::prefix('chat')->name('chat.')->group(function () {
         Route::get('/', function () {
@@ -45,6 +44,44 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
     Route::resource('users', UserController::class);
     Route::post('users/{user}/assign-permission', [UserController::class, 'assignPermission'])->name('users.assign-permission');
     Route::delete('users/{user}/permissions/{permission}', [UserController::class, 'removePermission'])->name('users.remove-permission');
+
+    // Customer Management Routes
+    Route::resource('customers', \App\Http\Controllers\CustomerController::class);
+    Route::get('customers/{customer}/devices', [\App\Http\Controllers\CustomerController::class, 'devices'])->name('customers.devices');
+
+    // Device Management Routes (nested under customers)
+    Route::get('customers/{customer}/devices/{device}', [\App\Http\Controllers\DeviceController::class, 'show'])->name('customers.devices.show');
+    Route::post('customers/{customer}/devices', [\App\Http\Controllers\DeviceController::class, 'store'])->name('customers.devices.store');
+    Route::put('customers/{customer}/devices/{device}', [\App\Http\Controllers\DeviceController::class, 'update'])->name('customers.devices.update');
+    Route::delete('customers/{customer}/devices/{device}', [\App\Http\Controllers\DeviceController::class, 'destroy'])->name('customers.devices.destroy');
+
+    // Invoice Management Routes
+    Route::resource('invoices', \App\Http\Controllers\InvoiceController::class);
+    Route::post('invoices/generate', [\App\Http\Controllers\InvoiceController::class, 'generate'])->name('invoices.generate');
+    Route::get('invoices/{invoice}/print', [\App\Http\Controllers\InvoiceController::class, 'print'])->name('invoices.print');
+
+    // Payment Report Routes
+    Route::get('payments/report', [\App\Http\Controllers\PaymentReportController::class, 'index'])->name('payments.report');
+    Route::get('payments/report/export', [\App\Http\Controllers\PaymentReportController::class, 'exportCsv'])->name('payments.report.export');
+
+    // Profile Routes
+    Route::get('profile', [\App\Http\Controllers\ProfileController::class, 'index'])->name('profile.index');
+    Route::put('profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+
+    // Map Routes
+    Route::get('map', [\App\Http\Controllers\MapController::class, 'index'])->name('map.index');
+    Route::get('map/customers', [\App\Http\Controllers\MapController::class, 'getCustomers'])->name('map.customers');
+
+    // Field Officer Routes
+    Route::prefix('field-officer')->name('field-officer.')->middleware('staff')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\FieldOfficerController::class, 'dashboard'])->name('dashboard');
+        Route::get('/customers', [\App\Http\Controllers\FieldOfficerController::class, 'customers'])->name('customers');
+        Route::get('/customers/{customer}', [\App\Http\Controllers\FieldOfficerController::class, 'showCustomer'])->name('customers.show');
+        Route::get('/map', [\App\Http\Controllers\FieldOfficerController::class, 'map'])->name('map');
+        Route::get('/map/customers', [\App\Http\Controllers\FieldOfficerController::class, 'getCustomersForMap'])->name('map.customers');
+        Route::get('/invoices/{invoice}/payment', [\App\Http\Controllers\FieldOfficerController::class, 'showPaymentForm'])->name('invoices.payment');
+        Route::post('/invoices/{invoice}/payment', [\App\Http\Controllers\FieldOfficerController::class, 'processPayment'])->name('invoices.payment.process');
+    });
 
     // Blank Pages
     Route::get('/blank', function () {

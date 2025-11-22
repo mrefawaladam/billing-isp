@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'fonnte' => [
+        'url' => env('FONNTE_URL', 'https://api.fonnte.com'),
+        'api_key' => env('FONNTE_API_KEY'),
+        'delay_between_messages' => env('FONNTE_DELAY_BETWEEN_MESSAGES', 3), // Detik
+        'max_messages_per_period' => env('FONNTE_MAX_MESSAGES_PER_PERIOD', 10), // Max pesan per periode
+        'rate_limit_period' => env('FONNTE_RATE_LIMIT_PERIOD', 5), // Periode dalam menit
+    ],
+
 ];

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -24,6 +25,7 @@ class DatabaseSeeder extends Seeder
         $admin = User::firstOrCreate(
             ['email' => 'admin@example.com'],
             [
+                'id' => Str::uuid()->toString(),
                 'name' => 'Admin User',
                 'password' => bcrypt('password'),
             ]
@@ -34,6 +36,7 @@ class DatabaseSeeder extends Seeder
         $manager = User::firstOrCreate(
             ['email' => 'manager@example.com'],
             [
+                'id' => Str::uuid()->toString(),
                 'name' => 'Manager User',
                 'password' => bcrypt('password'),
             ]
@@ -44,6 +47,7 @@ class DatabaseSeeder extends Seeder
         $user = User::firstOrCreate(
             ['email' => 'user@example.com'],
             [
+                'id' => Str::uuid()->toString(),
                 'name' => 'Regular User',
                 'password' => bcrypt('password'),
             ]
@@ -54,7 +58,8 @@ class DatabaseSeeder extends Seeder
         $testUser = User::firstOrCreate(
             ['email' => 'test@example.com'],
             [
-            'name' => 'Test User',
+                'id' => Str::uuid()->toString(),
+                'name' => 'Test User',
                 'password' => bcrypt('password'),
             ]
         );
@@ -66,5 +71,20 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Admin: admin@example.com / password');
         $this->command->info('Manager: manager@example.com / password');
         $this->command->info('User: user@example.com / password');
+
+        // Seed data aplikasi ISP Management
+        $this->command->info('');
+        $this->command->info('Seeding data aplikasi...');
+
+        $this->call([
+            CustomerSeeder::class,
+            DeviceSeeder::class,
+            InvoiceSeeder::class,
+            PaymentSeeder::class,
+            WaNotificationSeeder::class,
+        ]);
+
+        $this->command->info('');
+        $this->command->info('✅ Semua data berhasil di-seed!');
     }
 }

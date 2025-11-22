@@ -18,11 +18,11 @@
       <div class="d-block d-lg-none py-9 py-xl-0">
         <img src="{{ asset('assets/images/logos/logo.svg') }}" alt="matdash-img" />
       </div>
-      
+
       <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" href="javascript:void(0)" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <iconify-icon icon="solar:menu-dots-bold-duotone" class="fs-6"></iconify-icon>
       </a>
-      
+
       <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
         <div class="d-flex align-items-center justify-content-between">
           <ul class="navbar-nav flex-row mx-auto ms-lg-auto align-items-center justify-content-center">
@@ -34,7 +34,7 @@
                 <iconify-icon icon="solar:sun-2-line-duotone" class="sun fs-6"></iconify-icon>
               </a>
             </li>
-            
+
             <li class="nav-item d-block d-xl-none">
               <a class="nav-link nav-icon-hover-bg rounded-circle" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#exampleModal">
                 <iconify-icon icon="solar:magnifer-line-duotone" class="fs-6"></iconify-icon>
@@ -72,57 +72,54 @@
               </div>
             </li>
 
-            <!-- Language Dropdown -->
-            <li class="nav-item dropdown nav-icon-hover-bg rounded-circle">
-              <a class="nav-link" href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown" aria-expanded="false">
-                <img src="{{ asset('assets/images/flag/icon-flag-en.svg') }}" alt="matdash-img" width="20px" height="20px" class="rounded-circle object-fit-cover round-20" />
-              </a>
-              <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
-                <div class="message-body">
-                  <a href="javascript:void(0)" class="d-flex align-items-center gap-2 py-3 px-4 dropdown-item">
-                    <div class="position-relative">
-                      <img src="{{ asset('assets/images/flag/icon-flag-en.svg') }}" alt="matdash-img" width="20px" height="20px" class="rounded-circle object-fit-cover round-20" />
-                    </div>
-                    <p class="mb-0 fs-3">English (UK)</p>
-                  </a>
-                  <a href="javascript:void(0)" class="d-flex align-items-center gap-2 py-3 px-4 dropdown-item">
-                    <div class="position-relative">
-                      <img src="{{ asset('assets/images/flag/icon-flag-sa.svg') }}" alt="matdash-img" width="20px" height="20px" class="rounded-circle object-fit-cover round-20" />
-                    </div>
-                    <p class="mb-0 fs-3">عربي (Arabic)</p>
-                  </a>
-                </div>
-              </div>
-            </li>
 
             <!-- Profile Dropdown -->
+            @auth
             <li class="nav-item dropdown">
-              <a class="nav-link" href="javascript:void(0)" id="drop1" aria-expanded="false">
+              <a class="nav-link" href="javascript:void(0)" id="drop1" data-bs-toggle="dropdown" aria-expanded="false">
                 <div class="d-flex align-items-center gap-2 lh-base">
-                  <img src="{{ asset('assets/images/profile/user-1.jpg') }}" class="rounded-circle" width="35" height="35" alt="matdash-img" />
+                  <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 35px; height: 35px; font-weight: bold;">
+                    {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                  </div>
+                  <div class="d-none d-md-block">
+                    <span class="fw-semibold">{{ auth()->user()->name }}</span>
+                  </div>
                   <iconify-icon icon="solar:alt-arrow-down-bold" class="fs-2"></iconify-icon>
                 </div>
               </a>
               <div class="dropdown-menu profile-dropdown dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop1">
                 <div class="position-relative px-4 pt-3 pb-2">
                   <div class="d-flex align-items-center mb-3 pb-3 border-bottom gap-6">
-                    <img src="{{ asset('assets/images/profile/user-1.jpg') }}" class="rounded-circle" width="56" height="56" alt="matdash-img" />
+                    <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 56px; height: 56px; font-size: 20px; font-weight: bold;">
+                      {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                    </div>
                     <div>
-                      <h5 class="mb-0 fs-12">User Name <span class="text-success fs-11">Pro</span></h5>
-                      <p class="mb-0 text-dark">user@example.com</p>
+                      <h5 class="mb-0 fs-12">{{ auth()->user()->name }}</h5>
+                      <p class="mb-0 text-dark">{{ auth()->user()->email }}</p>
+                      @if(auth()->user()->roles->count() > 0)
+                        <span class="badge bg-success fs-11 mt-1">
+                          {{ auth()->user()->roles->first()->name }}
+                        </span>
+                      @endif
                     </div>
                   </div>
                   <div class="message-body">
-                    <a href="#" class="p-2 dropdown-item h6 rounded-1">My Profile</a>
-                    <a href="#" class="p-2 dropdown-item h6 rounded-1">Account Settings</a>
+                    <a href="{{ route('profile.index') }}" class="p-2 dropdown-item h6 rounded-1">
+                      <iconify-icon icon="solar:user-id-line-duotone" class="me-2"></iconify-icon>
+                      Profil Saya
+                    </a>
                     <form method="POST" action="{{ route('logout') }}" class="d-inline">
                       @csrf
-                      <button type="submit" class="p-2 dropdown-item h6 rounded-1 border-0 bg-transparent w-100 text-start">Sign Out</button>
+                      <button type="submit" class="p-2 dropdown-item h6 rounded-1 border-0 bg-transparent w-100 text-start">
+                        <iconify-icon icon="solar:logout-2-line-duotone" class="me-2"></iconify-icon>
+                        Keluar
+                      </button>
                     </form>
                   </div>
                 </div>
               </div>
             </li>
+            @endauth
           </ul>
         </div>
       </div>
