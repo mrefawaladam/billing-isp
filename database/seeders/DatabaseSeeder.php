@@ -82,6 +82,7 @@ class DatabaseSeeder extends Seeder
             InvoiceSeeder::class,
             PaymentSeeder::class,
             WaNotificationSeeder::class,
+            InventoryItemSeeder::class,
         ]);
 
         $this->command->info('');

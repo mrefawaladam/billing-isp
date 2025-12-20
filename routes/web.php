@@ -60,6 +60,23 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
     Route::post('invoices/generate', [\App\Http\Controllers\InvoiceController::class, 'generate'])->name('invoices.generate');
     Route::get('invoices/{invoice}/print', [\App\Http\Controllers\InvoiceController::class, 'print'])->name('invoices.print');
 
+    // Inventory Management Routes
+    Route::resource('inventory', \App\Http\Controllers\InventoryController::class);
+    Route::post('inventory/{inventory}/restock', [\App\Http\Controllers\InventoryController::class, 'restock'])->name('inventory.restock');
+    Route::get('inventory/{inventory}/use', [\App\Http\Controllers\InventoryController::class, 'showUseForm'])->name('inventory.use.form');
+    Route::post('inventory/{inventory}/use', [\App\Http\Controllers\InventoryController::class, 'useItem'])->name('inventory.use');
+    Route::get('customers/{customer}/inventory-history', [\App\Http\Controllers\InventoryController::class, 'getCustomerUsageHistory'])->name('customers.inventory-history');
+
+    // WhatsApp Notification Routes
+    Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\WhatsAppNotificationController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\WhatsAppNotificationController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\WhatsAppNotificationController::class, 'store'])->name('store');
+        Route::get('/{whatsapp}', [\App\Http\Controllers\WhatsAppNotificationController::class, 'show'])->name('show');
+        Route::post('/{whatsapp}/resend', [\App\Http\Controllers\WhatsAppNotificationController::class, 'resend'])->name('resend');
+        Route::post('/invoices/{invoice}/send', [\App\Http\Controllers\WhatsAppNotificationController::class, 'sendInvoice'])->name('invoice.send');
+    });
+
     // Payment Report Routes
     Route::get('payments/report', [\App\Http\Controllers\PaymentReportController::class, 'index'])->name('payments.report');
     Route::get('payments/report/export', [\App\Http\Controllers\PaymentReportController::class, 'exportCsv'])->name('payments.report.export');

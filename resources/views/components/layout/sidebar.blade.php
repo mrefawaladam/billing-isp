@@ -55,6 +55,13 @@
           </li>
 
           <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('inventory.index') }}">
+              <iconify-icon icon="solar:box-line-duotone"></iconify-icon>
+              <span class="hide-menu">Inventory Management</span>
+            </a>
+          </li>
+
+          <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('map.index') }}">
               <iconify-icon icon="solar:map-point-line-duotone"></iconify-icon>
               <span class="hide-menu">Peta Lokasi</span>
@@ -65,6 +72,13 @@
             <a class="sidebar-link" href="{{ route('payments.report') }}">
               <iconify-icon icon="solar:document-medicine-line-duotone"></iconify-icon>
               <span class="hide-menu">Laporan Pembayaran</span>
+            </a>
+          </li>
+
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('whatsapp.index') }}">
+              <iconify-icon icon="solar:chat-round-line-duotone"></iconify-icon>
+              <span class="hide-menu">Notifikasi WhatsApp</span>
             </a>
           </li>
 

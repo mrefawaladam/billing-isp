@@ -122,7 +122,6 @@ class SendWhatsAppNotification extends Command
                       ->where('phone', '!=', '');
             })
             ->get();
-
         $invoices = $invoices->merge($invoicesByDueDate);
 
         // 2. Invoice terbaru yang belum dibayar dari customer yang invoice_due_day = hari ini

@@ -7,23 +7,117 @@
   <link rel="shortcut icon" type="image/png" href="{{ asset('assets/images/logos/favicon.png') }}" />
   <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}" />
   <title>Login - MatDash Bootstrap Admin</title>
+  <style>
+    .login-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .login-sidebar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .login-form-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .login-card {
+      width: 100%;
+      max-width: 450px;
+    }
+    
+    .login-logo {
+      height: auto;
+      width: 100%;
+    }
+    
+    @media (max-width: 991.98px) {
+      .login-sidebar {
+        min-height: auto;
+        padding: 30px 20px;
+      }
+      
+      .login-form-container {
+        min-height: auto;
+        padding: 20px;
+      }
+      
+      .login-card {
+        max-width: 100%;
+      }
+    }
+    
+    @media (max-width: 575.98px) {
+      .login-wrapper {
+        padding: 10px;
+      }
+      
+      .login-sidebar {
+        padding: 20px 15px;
+      }
+      
+      .login-form-container {
+        padding: 15px 10px;
+      }
+      
+      .login-card .card-body {
+        padding: 1.25rem !important;
+      }
+      
+      h4 {
+        font-size: 1.25rem;
+      }
+      
+      .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-lg-3 d-flex align-items-center justify-content-center" style="min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="text-center text-white p-4">
-          <img src="{{ asset('assets/images/logos/logo.svg') }}" alt="Logo" class="mb-4" style="filter: brightness(0) invert(1);" />
+  <div class="container-fluid p-0">
+    <div class="row g-0">
+      <!-- Sidebar - Hidden on mobile, shown on desktop -->
+      <div class="col-lg-3 d-none d-lg-flex login-sidebar">
+        <div class="text-center text-white p-4 w-100">
+          <div class="mb-5">
+            <img src="{{ asset('logo.png') }}" alt="Logo" class="login-logo mb-4" style="max-width: 150px; height: auto; filter: brightness(0) invert(1);" />
+          </div>
           <h2 class="fw-bold mb-3">Welcome Back!</h2>
-          <p>Sign in to continue to your account</p>
+          <p class="fs-5">Sign in to continue to your account</p>
         </div>
       </div>
-      <div class="col-lg-9 d-flex align-items-center justify-content-center" style="min-height: 100vh;">
-        <div class="w-100" style="max-width: 450px;">
+      
+      <!-- Mobile Header - Shown only on mobile -->
+      <div class="col-12 d-lg-none login-sidebar">
+        <div class="text-center text-white p-4">
+          <div class="mb-4">
+            <img src="{{ asset('logo.png') }}" alt="Logo" class="login-logo mb-3" style="max-width: 120px; height: auto; filter: brightness(0) invert(1);" />
+          </div>
+          <h4 class="fw-bold mb-2">Welcome Back!</h4>
+          <p class="mb-0">Sign in to continue to your account</p>
+        </div>
+      </div>
+      
+      <!-- Login Form -->
+      <div class="col-lg-9 col-12 login-form-container">
+        <div class="login-card">
           <div class="card shadow-lg border-0">
-            <div class="card-body p-5">
-              <h4 class="fw-bold mb-4">Sign In</h4>
+            <div class="card-body p-4 p-lg-5">
+              <h4 class="fw-bold mb-4 text-center text-lg-start">Sign In</h4>
               
               @if (session('status'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">

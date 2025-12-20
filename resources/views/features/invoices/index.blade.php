@@ -351,6 +351,46 @@ $(document).ready(function() {
         });
     });
 
+    // Handle send WhatsApp notification button
+    $(document).on('click', '.btn-send-whatsapp-invoice', function(e) {
+        e.preventDefault();
+        const invoiceId = $(this).data('invoice-id');
+        
+        Swal.fire({
+            title: 'Kirim Notifikasi WhatsApp?',
+            text: 'Apakah Anda yakin ingin mengirim notifikasi tagihan via WhatsApp?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Kirim',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#25D366'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/whatsapp/invoices/${invoiceId}/send`,
+                    method: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content') || $('input[name="_token"]').val()
+                    },
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Toast.success(response.message);
+                        } else {
+                            Toast.error(response.message || 'Gagal mengirim notifikasi.');
+                        }
+                    },
+                    error: function(xhr) {
+                        const response = xhr.responseJSON;
+                        Toast.error(response?.message || 'Gagal mengirim notifikasi.');
+                    }
+                });
+            }
+        });
+    });
+
     // Reset form when modal is hidden
     $('#generateInvoiceModal, #invoiceModal, #confirmPaymentModal').on('hidden.bs.modal', function() {
         Modal.clear($(this).attr('id'));

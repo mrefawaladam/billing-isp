@@ -16,7 +16,7 @@ class FonnteService
     {
         $this->apiUrl = config('services.fonnte.url', 'https://api.fonnte.com');
         $this->apiKey = config('services.fonnte.api_key');
-        $this->delayBetweenMessages = config('services.fonnte.delay_between_messages', 3); // Default 3 detik
+        $this->delayBetweenMessages = (int) config('services.fonnte.delay_between_messages', 3); // Default 3 detik
     }
 
     /**
@@ -65,17 +65,32 @@ class FonnteService
             // Mark rate limit
             $this->markRateLimit($phone);
 
-            if ($response->successful() && isset($result['status']) && $result['status'] === 'success') {
+            // Fonnte API returns status: true (boolean) when successful
+            // Also check for "success! message in queue" in detail
+            $isSuccess = false;
+            if ($response->successful()) {
+                // Check if status is true (boolean) or 'success' (string)
+                if (isset($result['status'])) {
+                    $isSuccess = ($result['status'] === true || $result['status'] === 'success');
+                }
+                // Also check detail message for queue success
+                if (!$isSuccess && isset($result['detail'])) {
+                    $isSuccess = (stripos($result['detail'], 'success') !== false && 
+                                 stripos($result['detail'], 'queue') !== false);
+                }
+            }
+
+            if ($isSuccess) {
                 return [
                     'success' => true,
-                    'message' => 'Pesan berhasil dikirim',
+                    'message' => $result['detail'] ?? 'Pesan berhasil dikirim',
                     'data' => $result
                 ];
             }
 
             return [
                 'success' => false,
-                'message' => $result['message'] ?? 'Gagal mengirim pesan',
+                'message' => $result['message'] ?? ($result['detail'] ?? 'Gagal mengirim pesan'),
                 'data' => $result
             ];
 
@@ -137,8 +152,8 @@ class FonnteService
 
         // Max 10 pesan per 5 menit per nomor (lebih longgar untuk testing)
         // Atau bisa diatur via config
-        $maxMessages = config('services.fonnte.max_messages_per_period', 10);
-        $periodMinutes = config('services.fonnte.rate_limit_period', 5);
+        $maxMessages = (int) config('services.fonnte.max_messages_per_period', 10);
+        $periodMinutes = (int) config('services.fonnte.rate_limit_period', 5);
 
         if ($count >= $maxMessages) {
             Log::warning("Rate limit exceeded for phone: {$phone}", [
@@ -162,7 +177,7 @@ class FonnteService
     {
         $key = "fonnte_rate_limit_{$phone}";
         $count = Cache::get($key, 0);
-        $periodMinutes = config('services.fonnte.rate_limit_period', 5);
+        $periodMinutes = (int) config('services.fonnte.rate_limit_period', 5);
         Cache::put($key, $count + 1, now()->addMinutes($periodMinutes));
     }
 
@@ -230,17 +245,29 @@ class FonnteService
             $result = $response->json();
             $this->markRateLimit($phone);
 
-            if ($response->successful() && isset($result['status']) && $result['status'] === 'success') {
+            // Fonnte API returns status: true (boolean) when successful
+            $isSuccess = false;
+            if ($response->successful()) {
+                if (isset($result['status'])) {
+                    $isSuccess = ($result['status'] === true || $result['status'] === 'success');
+                }
+                if (!$isSuccess && isset($result['detail'])) {
+                    $isSuccess = (stripos($result['detail'], 'success') !== false && 
+                                 stripos($result['detail'], 'queue') !== false);
+                }
+            }
+
+            if ($isSuccess) {
                 return [
                     'success' => true,
-                    'message' => 'Pesan template berhasil dikirim',
+                    'message' => $result['detail'] ?? 'Pesan template berhasil dikirim',
                     'data' => $result
                 ];
             }
 
             return [
                 'success' => false,
-                'message' => $result['message'] ?? 'Gagal mengirim pesan template',
+                'message' => $result['message'] ?? ($result['detail'] ?? 'Gagal mengirim pesan template'),
                 'data' => $result
             ];
 
