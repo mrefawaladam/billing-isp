@@ -48,6 +48,7 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
     // Customer Management Routes
     Route::resource('customers', \App\Http\Controllers\CustomerController::class);
     Route::get('customers/{customer}/devices', [\App\Http\Controllers\CustomerController::class, 'devices'])->name('customers.devices');
+    Route::post('customers/bulk-assign', [\App\Http\Controllers\CustomerController::class, 'bulkAssign'])->name('customers.bulk-assign');
 
     // Device Management Routes (nested under customers)
     Route::get('customers/{customer}/devices/{device}', [\App\Http\Controllers\DeviceController::class, 'show'])->name('customers.devices.show');

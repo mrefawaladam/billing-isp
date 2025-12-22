@@ -192,7 +192,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($payments as $payment)
+                        @foreach($payments as $payment)
                         <tr>
                             <td>{{ $payment->paid_date->format('d/m/Y') }}</td>
                             <td>
@@ -231,26 +231,21 @@
                             </td>
                             <td>{{ $payment->note ?? '-' }}</td>
                         </tr>
-                        @empty
-                        <tr>
-                            <td colspan="8" class="text-center py-4">
-                                <i class="ti ti-inbox fs-1 text-muted"></i>
-                                <p class="text-muted mt-2 mb-0">Tidak ada data pembayaran untuk periode ini.</p>
-                            </td>
-                        </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
-                    @if($payments->count() > 0)
-                    <tfoot>
-                        <tr class="table-active">
-                            <th colspan="4" class="text-end"><strong>TOTAL:</strong></th>
-                            <th><strong>Rp {{ number_format($summary['total_amount'], 0, ',', '.') }}</strong></th>
-                            <th colspan="3"></th>
-                        </tr>
-                    </tfoot>
-                    @endif
                 </table>
             </div>
+            @if($payments->count() > 0)
+            <div class="card-footer bg-light">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        <h5 class="mb-0">
+                            <strong>TOTAL: Rp {{ number_format($summary['total_amount'], 0, ',', '.') }}</strong>
+                        </h5>
+                    </div>
+                </div>
+            </div>
+            @endif
         </div>
     </div>
 </div>
@@ -273,10 +268,13 @@ $(document).ready(function() {
     $('#payments-table').DataTable({
         order: [[0, 'desc']],
         pageLength: 25,
+        searching: true,
+        paging: {{ $payments->count() > 0 ? 'true' : 'false' }},
+        info: {{ $payments->count() > 0 ? 'true' : 'false' }},
         language: {
             processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
             lengthMenu: "Tampilkan _MENU_ entri",
-            zeroRecords: "Tidak ada data yang ditemukan",
+            zeroRecords: "Tidak ada data pembayaran untuk periode ini.",
             info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
             infoEmpty: "Menampilkan 0 sampai 0 dari 0 entri",
             infoFiltered: "(difilter dari _MAX_ total entri)",

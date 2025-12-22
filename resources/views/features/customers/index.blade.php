@@ -59,9 +59,14 @@
                         Kelola data pelanggan, tambah, edit, dan hapus pelanggan dari halaman ini.
                     </p>
                 </div>
-                <button type="button" class="btn btn-primary" id="btn-create-customer">
-                    <i class="ti ti-plus me-1"></i> Tambah Pelanggan Baru
-                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-success" id="btn-bulk-assign" style="display: none;">
+                        <i class="ti ti-user-check me-1"></i> Assign ke Staff
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn-create-customer">
+                        <i class="ti ti-plus me-1"></i> Tambah Pelanggan Baru
+                    </button>
+                </div>
             </div>
 
             <!-- Filters -->
@@ -104,6 +109,9 @@
                 <table id="customers-table" class="table table-striped table-bordered align-middle" style="min-width: 1000px;">
                     <thead>
                         <tr>
+                            <th style="min-width: 50px;">
+                                <input type="checkbox" id="select-all" class="form-check-input">
+                            </th>
                             <th style="min-width: 100px;">Kode</th>
                             <th style="min-width: 150px;">Nama</th>
                             <th style="min-width: 120px;">Telepon</th>
@@ -146,6 +154,19 @@
     </x-slot>
 </x-ui.modal>
 
+<!-- Bulk Assign Modal -->
+<x-ui.modal
+    id="bulkAssignModal"
+    title="Assign Pelanggan ke Staff"
+    size="md"
+    content-id="bulkAssignModalBody"
+>
+    <x-slot name="footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-bulk-assign">Assign</button>
+    </x-slot>
+</x-ui.modal>
+
 @push('scripts')
 @if(!isset($jqueryLoaded))
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -178,6 +199,7 @@ $(document).ready(function() {
             }
         },
         columns: [
+            { data: 'checkbox', name: 'checkbox', orderable: false, searchable: false },
             { data: 'customer_code', name: 'customer_code' },
             { data: 'name', name: 'name' },
             { data: 'phone', name: 'phone' },
@@ -209,6 +231,11 @@ $(document).ready(function() {
                 next: "Selanjutnya",
                 previous: "Sebelumnya"
             }
+        },
+        drawCallback: function() {
+            // Reset select all checkbox after table redraw
+            $('#select-all').prop('checked', false);
+            toggleBulkAssignButton();
         }
     });
 
@@ -221,6 +248,107 @@ $(document).ready(function() {
     $('#btn-reset-filter').on('click', function() {
         $('#filter-type, #filter-assigned, #filter-active').val('');
         customersTable.ajax.reload();
+    });
+
+    // Select all checkbox
+    $('#select-all').on('change', function() {
+        const isChecked = $(this).is(':checked');
+        $('.customer-checkbox').prop('checked', isChecked);
+        toggleBulkAssignButton();
+    });
+
+    // Individual checkbox change
+    $(document).on('change', '.customer-checkbox', function() {
+        const totalCheckboxes = $('.customer-checkbox').length;
+        const checkedCheckboxes = $('.customer-checkbox:checked').length;
+        $('#select-all').prop('checked', totalCheckboxes === checkedCheckboxes);
+        toggleBulkAssignButton();
+    });
+
+    // Toggle bulk assign button visibility
+    function toggleBulkAssignButton() {
+        const checkedCount = $('.customer-checkbox:checked').length;
+        if (checkedCount > 0) {
+            $('#btn-bulk-assign').show().html(`<i class="ti ti-user-check me-1"></i> Assign ke Staff (${checkedCount})`);
+        } else {
+            $('#btn-bulk-assign').hide();
+        }
+    }
+
+    // Bulk assign button click
+    $('#btn-bulk-assign').on('click', function() {
+        const selectedIds = [];
+        $('.customer-checkbox:checked').each(function() {
+            selectedIds.push($(this).val());
+        });
+
+        if (selectedIds.length === 0) {
+            Toast.warning('Pilih minimal satu pelanggan.');
+            return;
+        }
+
+        // Load bulk assign form
+        const formHtml = `
+            <form id="bulk-assign-form">
+                <div class="mb-3">
+                    <label for="bulk-assigned-to" class="form-label">Pilih Staff</label>
+                    <select class="form-select" id="bulk-assigned-to" name="assigned_to">
+                        <option value="">-- Hapus Penugasan --</option>
+                        @foreach($users as $user)
+                            <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">Pilih staff yang akan ditugaskan, atau kosongkan untuk menghapus penugasan.</small>
+                </div>
+                <div class="alert alert-info">
+                    <i class="ti ti-info-circle me-1"></i>
+                    <strong>${selectedIds.length} pelanggan</strong> akan di-assign ke staff yang dipilih.
+                </div>
+            </form>
+        `;
+
+        $('#bulkAssignModalBody').html(formHtml);
+        $('#bulkAssignModal').modal('show');
+    });
+
+    // Confirm bulk assign
+    $('#btn-confirm-bulk-assign').on('click', function() {
+        const selectedIds = [];
+        $('.customer-checkbox:checked').each(function() {
+            selectedIds.push($(this).val());
+        });
+
+        const assignedTo = $('#bulk-assigned-to').val();
+
+        $.ajax({
+            url: "{{ route('customers.bulk-assign') }}",
+            method: 'POST',
+            data: {
+                customer_ids: selectedIds,
+                assigned_to: assignedTo,
+                _token: $('meta[name="csrf-token"]').attr('content') || $('input[name="_token"]').val()
+            },
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(response) {
+                if (response.success) {
+                    Toast.success(response.message);
+                    $('#bulkAssignModal').modal('hide');
+                    $('#select-all').prop('checked', false);
+                    $('.customer-checkbox').prop('checked', false);
+                    toggleBulkAssignButton();
+                    customersTable.ajax.reload(null, false);
+                }
+            },
+            error: function(xhr) {
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    Toast.error(xhr.responseJSON.message);
+                } else {
+                    Toast.error('Gagal melakukan bulk assign.');
+                }
+            }
+        });
     });
 
     // Load create form

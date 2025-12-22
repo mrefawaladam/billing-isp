@@ -41,6 +41,9 @@ class CustomerController extends Controller
             }
 
             return DataTables::of($query)
+                ->addColumn('checkbox', function ($customer) {
+                    return '<input type="checkbox" class="form-check-input customer-checkbox" value="' . $customer->id . '">';
+                })
                 ->addColumn('assigned_user', function ($customer) {
                     return $customer->assignedUser ? $customer->assignedUser->name : '-';
                 })
@@ -79,13 +82,14 @@ class CustomerController extends Controller
                         $q->where('name', 'like', "%{$keyword}%");
                     });
                 })
-                ->rawColumns(['type_badge', 'status_badge', 'action'])
+                ->rawColumns(['checkbox', 'type_badge', 'status_badge', 'action'])
                 ->make(true);
         }
 
+        // Get all users that can be assigned (admin, manager, staff/field officer)
         $users = User::whereHas('roles', function ($query) {
-            $query->whereIn('name', ['admin', 'manager']);
-        })->orWhere('email', 'like', '%penagih%')->get();
+            $query->whereIn('name', ['admin', 'manager', 'staff']);
+        })->orderBy('name')->get();
 
         return view('features.customers.index', compact('users'));
     }
@@ -95,9 +99,10 @@ class CustomerController extends Controller
      */
     public function create()
     {
+        // Get all users that can be assigned (admin, manager, staff/field officer)
         $users = User::whereHas('roles', function ($query) {
-            $query->whereIn('name', ['admin', 'manager']);
-        })->orWhere('email', 'like', '%penagih%')->get();
+            $query->whereIn('name', ['admin', 'manager', 'staff']);
+        })->orderBy('name')->get();
 
         return response()->json([
             'html' => view('features.customers.partials.form', [
@@ -151,9 +156,10 @@ class CustomerController extends Controller
     public function show(Customer $customer)
     {
         $customer->load('assignedUser', 'devices', 'invoices');
+        // Get all users that can be assigned (admin, manager, staff/field officer)
         $users = User::whereHas('roles', function ($query) {
-            $query->whereIn('name', ['admin', 'manager']);
-        })->orWhere('email', 'like', '%penagih%')->get();
+            $query->whereIn('name', ['admin', 'manager', 'staff']);
+        })->orderBy('name')->get();
 
         if (request()->ajax()) {
             return response()->json([
@@ -169,9 +175,10 @@ class CustomerController extends Controller
      */
     public function edit(Customer $customer)
     {
+        // Get all users that can be assigned (admin, manager, staff/field officer)
         $users = User::whereHas('roles', function ($query) {
-            $query->whereIn('name', ['admin', 'manager']);
-        })->orWhere('email', 'like', '%penagih%')->get();
+            $query->whereIn('name', ['admin', 'manager', 'staff']);
+        })->orderBy('name')->get();
 
         return response()->json([
             'html' => view('features.customers.partials.form', [
@@ -258,6 +265,39 @@ class CustomerController extends Controller
 
         return redirect()->route('customers.index')
             ->with('success', 'Pelanggan berhasil dihapus.');
+    }
+
+    /**
+     * Bulk assign customers to staff
+     */
+    public function bulkAssign(Request $request)
+    {
+        $request->validate([
+            'customer_ids' => 'required|array',
+            'customer_ids.*' => 'required|uuid|exists:customers,id',
+            'assigned_to' => 'nullable|uuid|exists:users,id',
+        ]);
+
+        $customerIds = $request->customer_ids;
+        $assignedTo = $request->assigned_to ?: null;
+
+        Customer::whereIn('id', $customerIds)
+            ->update(['assigned_to' => $assignedTo]);
+
+        $count = count($customerIds);
+        $message = $assignedTo 
+            ? "Berhasil menugaskan {$count} pelanggan ke staff."
+            : "Berhasil menghapus penugasan dari {$count} pelanggan.";
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message
+            ]);
+        }
+
+        return redirect()->route('customers.index')
+            ->with('success', $message);
     }
 }
 

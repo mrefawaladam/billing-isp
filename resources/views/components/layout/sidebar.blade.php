@@ -24,7 +24,9 @@
             </a>
           </li>
 
-          <!-- Management -->
+          <!-- Management Section (Admin, Manager, Moderator) -->
+          @auth
+          @if(auth()->user()->hasAnyRole(['admin', 'manager', 'moderator']))
           <li>
             <span class="sidebar-divider lg"></span>
           </li>
@@ -33,54 +35,77 @@
             <span class="hide-menu">Manajemen</span>
           </li>
 
+          <!-- User Management (Admin & Manager only) -->
+          @if(auth()->user()->hasAnyRole(['admin', 'manager']))
           <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('users.index') }}">
               <iconify-icon icon="solar:users-group-two-rounded-line-duotone"></iconify-icon>
               <span class="hide-menu">User Management</span>
             </a>
           </li>
+          @endif
 
+          <!-- Customer Management (Admin, Manager, Moderator) -->
+          @if(auth()->user()->hasAnyRole(['admin', 'manager', 'moderator']))
           <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('customers.index') }}">
               <iconify-icon icon="solar:user-id-line-duotone"></iconify-icon>
               <span class="hide-menu">Customer Management</span>
             </a>
           </li>
+          @endif
 
+          <!-- Invoice Management (Admin, Manager, Moderator) -->
+          @if(auth()->user()->hasAnyRole(['admin', 'manager', 'moderator']))
           <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('invoices.index') }}">
               <iconify-icon icon="solar:document-text-line-duotone"></iconify-icon>
               <span class="hide-menu">Invoice Management</span>
             </a>
           </li>
+          @endif
 
+          <!-- Inventory Management (Admin only) -->
+          @if(auth()->user()->hasRole('admin'))
           <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('inventory.index') }}">
               <iconify-icon icon="solar:box-line-duotone"></iconify-icon>
               <span class="hide-menu">Inventory Management</span>
             </a>
           </li>
+          @endif
 
+          <!-- Peta Lokasi (Admin, Manager) -->
+          @if(auth()->user()->hasAnyRole(['admin', 'manager']))
           <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('map.index') }}">
               <iconify-icon icon="solar:map-point-line-duotone"></iconify-icon>
               <span class="hide-menu">Peta Lokasi</span>
             </a>
           </li>
+          @endif
 
+          <!-- Laporan Pembayaran (Admin, Manager) -->
+          @if(auth()->user()->hasAnyRole(['admin', 'manager']))
           <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('payments.report') }}">
               <iconify-icon icon="solar:document-medicine-line-duotone"></iconify-icon>
               <span class="hide-menu">Laporan Pembayaran</span>
             </a>
           </li>
+          @endif
 
+          <!-- Notifikasi WhatsApp (Admin, Manager) -->
+          @if(auth()->user()->hasAnyRole(['admin', 'manager']))
           <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('whatsapp.index') }}">
               <iconify-icon icon="solar:chat-round-line-duotone"></iconify-icon>
               <span class="hide-menu">Notifikasi WhatsApp</span>
             </a>
           </li>
+          @endif
+          @endif
+          @endauth
 
           <!-- Field Officer Section (Only for Staff Role) -->
           @auth
