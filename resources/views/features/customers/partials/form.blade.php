@@ -63,6 +63,47 @@
                 <div class="invalid-feedback d-none" id="address-error"></div>
             </div>
 
+            <div class="mb-3">
+                <label class="form-label">
+                    <i class="ti ti-map-pin me-1"></i>Lokasi Detail
+                </label>
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="kabupaten"
+                            name="kabupaten"
+                            value="{{ $isEdit ? $customer->kabupaten : old('kabupaten') }}"
+                            placeholder="Kabupaten"
+                        >
+                        <div class="invalid-feedback d-none" id="kabupaten-error"></div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="kecamatan"
+                            name="kecamatan"
+                            value="{{ $isEdit ? $customer->kecamatan : old('kecamatan') }}"
+                            placeholder="Kecamatan"
+                        >
+                        <div class="invalid-feedback d-none" id="kecamatan-error"></div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="kelurahan"
+                            name="kelurahan"
+                            value="{{ $isEdit ? $customer->kelurahan : old('kelurahan') }}"
+                            placeholder="Kelurahan/Desa"
+                        >
+                        <div class="invalid-feedback d-none" id="kelurahan-error"></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="lat" class="form-label">Latitude</label>
@@ -130,19 +171,60 @@
             </div>
 
             <div class="mb-3">
-                <label for="assigned_to" class="form-label">Penanggung Jawab</label>
-                <select class="form-select" id="assigned_to" name="assigned_to">
-                    <option value="">Pilih Penanggung Jawab</option>
+                <label for="assigned_users" class="form-label">Penanggung Jawab</label>
+                <select class="form-select" id="assigned_users" name="assigned_users[]" multiple size="5">
                     @foreach($users as $user)
-                        <option value="{{ $user->id }}" {{ ($isEdit && $customer->assigned_to === $user->id) || old('assigned_to') == $user->id ? 'selected' : '' }}>
+                        <option value="{{ $user->id }}" 
+                            {{ ($isEdit && $customer->assignedUsers->contains($user->id)) || (is_array(old('assigned_users')) && in_array($user->id, old('assigned_users'))) ? 'selected' : '' }}>
                             {{ $user->name }}
                         </option>
                     @endforeach
                 </select>
-                <div class="invalid-feedback d-none" id="assigned_to-error"></div>
+                <small class="text-muted">
+                    <i class="ti ti-info-circle me-1"></i>
+                    Gunakan Ctrl (Windows/Linux) atau Cmd (Mac) untuk memilih multiple
+                </small>
+                <div class="invalid-feedback d-none" id="assigned_users-error"></div>
             </div>
 
             <div class="mb-3">
+                <label class="form-label">Paket Internet</label>
+                <div class="input-group mb-2">
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="package-display"
+                        readonly
+                        placeholder="Pilih paket atau input manual"
+                        value="{{ $isEdit && $customer->package ? $customer->package->name . ' - Rp ' . number_format($customer->package->price, 0, ',', '.') : '' }}"
+                        style="background-color: #f8f9fa;"
+                    >
+                    <button type="button" class="btn btn-primary" id="btn-select-package">
+                        <i class="ti ti-package me-1"></i> Pilih Paket
+                    </button>
+                </div>
+                <input type="hidden" id="package_id" name="package_id" value="{{ $isEdit ? $customer->package_id : old('package_id') }}">
+                
+                <div class="form-check mt-2">
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="use_custom_price"
+                        name="use_custom_price"
+                        value="1"
+                        {{ ($isEdit && $customer->use_custom_price) || old('use_custom_price') ? 'checked' : '' }}
+                    >
+                    <label class="form-check-label" for="use_custom_price">
+                        Gunakan Harga Custom
+                    </label>
+                </div>
+                <small class="text-muted">
+                    <i class="ti ti-info-circle me-1"></i>
+                    Jika tidak memilih paket, Anda dapat menginput biaya bulanan secara manual
+                </small>
+            </div>
+
+            <div class="mb-3" id="monthly-fee-wrapper">
                 <label for="monthly_fee" class="form-label">Biaya Bulanan (Rp) <span class="text-danger">*</span></label>
                 <input
                     type="number"
@@ -234,25 +316,69 @@
         </div>
     </div>
 
-    <!-- Foto Rumah Pelanggan -->
+    <!-- Foto Rumah & Identitas Pelanggan -->
     <div class="row mt-4">
         <div class="col-12">
-            <h5 class="mb-3">Foto Rumah Pelanggan</h5>
-            <div class="mb-3">
-                <label for="house_photo" class="form-label">Upload Foto Rumah</label>
-                <input
-                    type="file"
-                    class="form-control"
-                    id="house_photo"
-                    name="house_photo"
-                    accept="image/*"
-                >
-                <small class="text-muted">Format: JPG, PNG, GIF (Max: 5MB)</small>
-                @if($isEdit && $customer->house_photo_url)
-                    <div class="mt-2">
-                        <img src="{{ $customer->house_photo_url }}" alt="Foto Rumah" class="img-thumbnail" style="max-width: 300px; max-height: 300px;">
+            <h5 class="mb-3 border-bottom pb-2">
+                <i class="ti ti-photo me-2"></i>Dokumentasi Pelanggan
+            </h5>
+        </div>
+        <div class="col-md-6">
+            <div class="card border">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">
+                        <i class="ti ti-home me-2 text-primary"></i>Foto Rumah Pelanggan
+                    </h6>
+                    <div class="mb-3">
+                        <label for="house_photo" class="form-label">Upload Foto Rumah</label>
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="house_photo"
+                            name="house_photo"
+                            accept="image/*"
+                        >
+                        <small class="text-muted">
+                            <i class="ti ti-info-circle me-1"></i>
+                            Format: JPG, PNG, GIF (Max: 5MB)
+                        </small>
+                        @if($isEdit && $customer->house_photo_url)
+                            <div class="mt-3">
+                                <p class="mb-1 small text-muted">Foto Saat Ini:</p>
+                                <img src="{{ $customer->house_photo_url }}" alt="Foto Rumah" class="img-thumbnail" style="max-width: 100%; max-height: 300px; border-radius: 8px;">
+                            </div>
+                        @endif
                     </div>
-                @endif
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">
+                        <i class="ti ti-id me-2 text-success"></i>Foto Identitas Pelanggan
+                    </h6>
+                    <div class="mb-3">
+                        <label for="identity_photo" class="form-label">Upload Foto Identitas (KTP/SIM/dll)</label>
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="identity_photo"
+                            name="identity_photo"
+                            accept="image/*"
+                        >
+                        <small class="text-muted">
+                            <i class="ti ti-info-circle me-1"></i>
+                            Format: JPG, PNG, GIF (Max: 5MB)
+                        </small>
+                        @if($isEdit && $customer->identity_photo_url)
+                            <div class="mt-3">
+                                <p class="mb-1 small text-muted">Foto Saat Ini:</p>
+                                <img src="{{ $customer->identity_photo_url }}" alt="Foto Identitas" class="img-thumbnail" style="max-width: 100%; max-height: 300px; border-radius: 8px;">
+                            </div>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -278,6 +404,9 @@
 
     $(document).ready(function() {
         $('#monthly_fee, #discount, #ppn_included').on('input change', calculateTotalFee);
+        
+        // Package selection handlers are now in customers/index.blade.php
+        // to avoid nested modal issues
     });
 
     </script>

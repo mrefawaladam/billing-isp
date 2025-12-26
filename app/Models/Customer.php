@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -35,13 +36,18 @@ class Customer extends Model
         'name',
         'phone',
         'address',
+        'kabupaten',
+        'kecamatan',
+        'kelurahan',
         'lat',
         'lng',
         'house_photo_url',
+        'identity_photo_url',
         'type',
         'active',
-        'assigned_to',
         'monthly_fee',
+        'package_id',
+        'use_custom_price',
         'discount',
         'ppn_included',
         'total_fee',
@@ -51,6 +57,7 @@ class Customer extends Model
     protected $casts = [
         'active' => 'boolean',
         'ppn_included' => 'boolean',
+        'use_custom_price' => 'boolean',
         'lat' => 'decimal:7',
         'lng' => 'decimal:7',
         'monthly_fee' => 'decimal:2',
@@ -58,9 +65,19 @@ class Customer extends Model
         'total_fee' => 'decimal:2',
     ];
 
-    public function assignedUser(): BelongsTo
+    public function assignedUsers(): BelongsToMany
     {
-        return $this->belongsTo(User::class, 'assigned_to');
+        return $this->belongsToMany(User::class, 'customer_user', 'customer_id', 'user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Legacy method for backward compatibility (returns first assigned user)
+     * @deprecated Use assignedUsers() instead
+     */
+    public function assignedUser(): ?User
+    {
+        return $this->assignedUsers()->first();
     }
 
     public function devices(): HasMany
@@ -71,6 +88,22 @@ class Customer extends Model
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    public function package(): BelongsTo
+    {
+        return $this->belongsTo(Package::class);
+    }
+
+    /**
+     * Get effective monthly fee (from package or custom price)
+     */
+    public function getEffectiveMonthlyFeeAttribute(): float
+    {
+        if ($this->use_custom_price) {
+            return (float) $this->monthly_fee;
+        }
+        return $this->package ? (float) $this->package->price : (float) $this->monthly_fee;
     }
 }
 

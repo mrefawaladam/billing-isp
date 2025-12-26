@@ -75,6 +75,16 @@
           </li>
           @endif
 
+          <!-- Package Management (Admin, Manager) -->
+          @if(auth()->user()->hasAnyRole(['admin', 'manager']))
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('packages.index') }}">
+              <iconify-icon icon="solar:card-send-line-duotone"></iconify-icon>
+              <span class="hide-menu">Package Management</span>
+            </a>
+          </li>
+          @endif
+
           <!-- Peta Lokasi (Admin, Manager) -->
           @if(auth()->user()->hasAnyRole(['admin', 'manager']))
           <li class="sidebar-item">

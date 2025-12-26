@@ -77,6 +77,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Seeding data aplikasi...');
 
         $this->call([
+            PackageSeeder::class,
             CustomerSeeder::class,
             DeviceSeeder::class,
             InvoiceSeeder::class,

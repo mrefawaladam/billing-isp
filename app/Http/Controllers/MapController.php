@@ -30,13 +30,15 @@ class MapController extends Controller
         $query = Customer::where('active', true)
             ->whereNotNull('lat')
             ->whereNotNull('lng')
-            ->with(['assignedUser', 'invoices' => function ($q) {
+            ->with(['assignedUsers', 'invoices' => function ($q) {
                 $q->orderBy('created_at', 'desc')->limit(1);
             }]);
 
         // Filter berdasarkan penanggung jawab
         if ($request->filled('assigned_to') && $request->assigned_to !== null && $request->assigned_to !== '') {
-            $query->where('assigned_to', $request->assigned_to);
+            $query->whereHas('assignedUsers', function($q) use ($request) {
+                $q->where('users.id', $request->assigned_to);
+            });
         }
 
         // Filter berdasarkan jenis pelanggan
@@ -109,7 +111,7 @@ class MapController extends Controller
                 'lng' => (float) $customer->lng,
                 'type' => $customer->type,
                 'total_fee' => $customer->total_fee,
-                'assigned_user' => $customer->assignedUser ? $customer->assignedUser->name : null,
+                'assigned_user' => $customer->assignedUsers->count() > 0 ? $customer->assignedUsers->pluck('name')->implode(', ') : null,
                 'invoice_status' => $status,
                 'invoice_status_text' => $statusText,
                 'marker_color' => $markerColor,

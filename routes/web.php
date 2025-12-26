@@ -68,6 +68,10 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
     Route::post('inventory/{inventory}/use', [\App\Http\Controllers\InventoryController::class, 'useItem'])->name('inventory.use');
     Route::get('customers/{customer}/inventory-history', [\App\Http\Controllers\InventoryController::class, 'getCustomerUsageHistory'])->name('customers.inventory-history');
 
+    // Package Management Routes
+    Route::resource('packages', \App\Http\Controllers\PackageController::class);
+    Route::get('packages/api/active', [\App\Http\Controllers\PackageController::class, 'getActivePackages'])->name('packages.api.active');
+
     // WhatsApp Notification Routes
     Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
         Route::get('/', [\App\Http\Controllers\WhatsAppNotificationController::class, 'index'])->name('index');

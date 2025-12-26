@@ -167,6 +167,83 @@
     </x-slot>
 </x-ui.modal>
 
+<!-- Package Selection Modal -->
+<div class="modal fade" id="packageSelectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="ti ti-package me-2"></i>Pilih Paket Internet
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover table-striped mb-0" id="package-select-table">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="min-width: 200px;">Nama Paket</th>
+                                <th style="min-width: 120px;">Kode Paket</th>
+                                <th style="min-width: 100px;">Kecepatan</th>
+                                <th style="min-width: 150px;">Type Layanan</th>
+                                <th style="min-width: 150px;" class="text-end">Harga</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="ti ti-package-off" style="font-size: 2rem;"></i>
+                                    <p class="mt-2 mb-0">Klik "Pilih Paket" untuk memuat daftar paket</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="ti ti-x me-1"></i>Batal
+                </button>
+                <button type="button" class="btn btn-danger" id="btn-clear-package">
+                    <i class="ti ti-trash me-1"></i>Hapus Pilihan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('styles')
+<style>
+.package-row {
+    transition: all 0.2s ease;
+}
+
+.package-row:hover {
+    background-color: #e7f3ff !important;
+    transform: translateX(2px);
+}
+
+.package-row.table-active {
+    background-color: #cfe2ff !important;
+}
+
+#package-select-table thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+#package-select-table tbody tr {
+    cursor: pointer;
+}
+
+#package-select-table tbody tr:active {
+    transform: scale(0.98);
+}
+</style>
+@endpush
+
 @push('scripts')
 @if(!isset($jqueryLoaded))
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -291,14 +368,16 @@ $(document).ready(function() {
         const formHtml = `
             <form id="bulk-assign-form">
                 <div class="mb-3">
-                    <label for="bulk-assigned-to" class="form-label">Pilih Staff</label>
-                    <select class="form-select" id="bulk-assigned-to" name="assigned_to">
-                        <option value="">-- Hapus Penugasan --</option>
+                    <label for="bulk-assigned-users" class="form-label">Pilih Staff</label>
+                    <select class="form-select" id="bulk-assigned-users" name="assigned_users[]" multiple size="5">
                         @foreach($users as $user)
                             <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
                         @endforeach
                     </select>
-                    <small class="text-muted">Pilih staff yang akan ditugaskan, atau kosongkan untuk menghapus penugasan.</small>
+                    <small class="text-muted">
+                        <i class="ti ti-info-circle me-1"></i>
+                        Gunakan Ctrl (Windows/Linux) atau Cmd (Mac) untuk memilih multiple. Kosongkan untuk menghapus penugasan.
+                    </small>
                 </div>
                 <div class="alert alert-info">
                     <i class="ti ti-info-circle me-1"></i>
@@ -318,14 +397,14 @@ $(document).ready(function() {
             selectedIds.push($(this).val());
         });
 
-        const assignedTo = $('#bulk-assigned-to').val();
+        const assignedUsers = $('#bulk-assigned-users').val() || [];
 
         $.ajax({
             url: "{{ route('customers.bulk-assign') }}",
             method: 'POST',
             data: {
                 customer_ids: selectedIds,
-                assigned_to: assignedTo,
+                assigned_users: assignedUsers,
                 _token: $('meta[name="csrf-token"]').attr('content') || $('input[name="_token"]').val()
             },
             headers: {
@@ -632,6 +711,128 @@ $(document).ready(function() {
         setTimeout(function() {
             initLocationMap();
         }, 500);
+    });
+
+    // Store selected package price for later use
+    let selectedPackagePrice = null;
+
+    // Package Selection Modal Handler
+    $(document).on('click', '#btn-select-package', function() {
+        // Always reload packages to ensure fresh data
+        $('#package-select-table tbody').html(`
+            <tr>
+                <td colspan="5" class="text-center py-4">
+                    <div class="spinner-border text-primary me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span class="text-muted">Memuat paket...</span>
+                </td>
+            </tr>
+        `);
+        
+        $.get("{{ route('packages.api.active') }}", function(response) {
+            let tbody = $('#package-select-table tbody');
+            tbody.empty();
+            
+            if (response.success && response.data.length > 0) {
+                response.data.forEach(function(pkg) {
+                    const price = parseFloat(pkg.price) || 0;
+                    const row = $(`
+                        <tr class="package-row" data-package-id="${pkg.id}" data-package-name="${pkg.name}" data-package-price="${price}" style="cursor: pointer;">
+                            <td>
+                                <div class="fw-semibold">${pkg.name}</div>
+                            </td>
+                            <td><code class="text-primary">${pkg.package_code}</code></td>
+                            <td>
+                                ${pkg.speed ? '<span class="badge bg-info">' + pkg.speed + '</span>' : '<span class="text-muted">-</span>'}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">${pkg.service_type}</span>
+                            </td>
+                            <td class="text-end">
+                                <strong class="text-success fs-6">Rp ${price.toLocaleString('id-ID')}</strong>
+                            </td>
+                        </tr>
+                    `);
+                    tbody.append(row);
+                });
+            } else {
+                tbody.html(`
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="ti ti-package-off" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0">Tidak ada paket tersedia</p>
+                        </td>
+                    </tr>
+                `);
+            }
+        }).fail(function() {
+            $('#package-select-table tbody').html(`
+                <tr>
+                    <td colspan="5" class="text-center text-danger py-4">
+                        <i class="ti ti-alert-circle" style="font-size: 2rem;"></i>
+                        <p class="mt-2 mb-0">Gagal memuat paket. Silakan coba lagi.</p>
+                    </td>
+                </tr>
+            `);
+        });
+        
+        $('#packageSelectModal').modal('show');
+    });
+
+    // Select package from table
+    $(document).on('click', '.package-row', function() {
+        const packageId = $(this).data('package-id');
+        const packageName = $(this).data('package-name');
+        const packagePrice = parseFloat($(this).data('package-price')) || 0;
+
+        // Store package price for later use
+        selectedPackagePrice = packagePrice;
+
+        $('#package_id').val(packageId);
+        $('#package-display').val(packageName + ' - Rp ' + packagePrice.toLocaleString('id-ID'));
+        
+        // Auto-fill monthly_fee if not using custom price
+        if (!$('#use_custom_price').is(':checked')) {
+            $('#monthly_fee').val(packagePrice);
+            // Trigger change event to recalculate total
+            $('#monthly_fee').trigger('input');
+        }
+
+        $('#packageSelectModal').modal('hide');
+    });
+
+    // Clear package selection
+    $('#btn-clear-package').on('click', function() {
+        $('#package_id').val('');
+        $('#package-display').val('');
+        selectedPackagePrice = null;
+        $('#packageSelectModal').modal('hide');
+    });
+
+    // Toggle custom price
+    $(document).on('change', '#use_custom_price', function() {
+        if ($(this).is(':checked')) {
+            $('#monthly-fee-wrapper').show();
+            // Let user input manually
+        } else {
+            // If package is selected, use package price
+            if (selectedPackagePrice !== null) {
+                $('#monthly_fee').val(selectedPackagePrice);
+                $('#monthly_fee').trigger('input');
+            } else {
+                // Try to extract from display value as fallback
+                const displayValue = $('#package-display').val();
+                if (displayValue) {
+                    const priceMatch = displayValue.match(/Rp\s*([\d.,]+)/);
+                    if (priceMatch) {
+                        const price = parseFloat(priceMatch[1].replace(/\./g, '').replace(',', '.')) || 0;
+                        $('#monthly_fee').val(price);
+                        $('#monthly_fee').trigger('input');
+                    }
+                }
+            }
+        }
     });
 
     // Device Management Functions

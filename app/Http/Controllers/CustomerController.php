@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\Package;
 use App\Models\User;
 use App\Services\CustomerService;
 use Illuminate\Http\Request;
@@ -23,16 +24,18 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = Customer::with('assignedUser')->select('customers.*');
+            $query = Customer::with('assignedUsers')->select('customers.*');
 
             // Filter berdasarkan type
             if ($request->filled('type') && $request->type !== null && $request->type !== '') {
                 $query->where('type', $request->type);
             }
 
-            // Filter berdasarkan assigned_to
+            // Filter berdasarkan assigned_to (using pivot table)
             if ($request->filled('assigned_to') && $request->assigned_to !== null && $request->assigned_to !== '') {
-                $query->where('assigned_to', $request->assigned_to);
+                $query->whereHas('assignedUsers', function ($q) use ($request) {
+                    $q->where('users.id', $request->assigned_to);
+                });
             }
 
             // Filter berdasarkan active
@@ -45,7 +48,11 @@ class CustomerController extends Controller
                     return '<input type="checkbox" class="form-check-input customer-checkbox" value="' . $customer->id . '">';
                 })
                 ->addColumn('assigned_user', function ($customer) {
-                    return $customer->assignedUser ? $customer->assignedUser->name : '-';
+                    if ($customer->assignedUsers->count() > 0) {
+                        $names = $customer->assignedUsers->pluck('name')->toArray();
+                        return implode(', ', $names);
+                    }
+                    return '-';
                 })
                 ->addColumn('type_badge', function ($customer) {
                     $badges = [
@@ -78,7 +85,7 @@ class CustomerController extends Controller
                     return $customer->created_at ? $customer->created_at->format('d/m/Y') : '-';
                 })
                 ->filterColumn('assigned_user', function ($query, $keyword) {
-                    $query->whereHas('assignedUser', function ($q) use ($keyword) {
+                    $query->whereHas('assignedUsers', function ($q) use ($keyword) {
                         $q->where('name', 'like', "%{$keyword}%");
                     });
                 })
@@ -104,9 +111,13 @@ class CustomerController extends Controller
             $query->whereIn('name', ['admin', 'manager', 'staff']);
         })->orderBy('name')->get();
 
+        // Get active packages
+        $packages = Package::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
+
         return response()->json([
             'html' => view('features.customers.partials.form', [
                 'users' => $users,
+                'packages' => $packages,
                 'customer' => null,
                 'formAction' => route('customers.store'),
                 'formMethod' => 'POST',
@@ -124,7 +135,8 @@ class CustomerController extends Controller
             $validated = $request->validate(CustomerService::getCreateRules());
 
             $housePhoto = $request->hasFile('house_photo') ? $request->file('house_photo') : null;
-            $this->customerService->create($validated, $housePhoto);
+            $identityPhoto = $request->hasFile('identity_photo') ? $request->file('identity_photo') : null;
+            $this->customerService->create($validated, $housePhoto, $identityPhoto);
 
             if ($request->ajax()) {
                 return response()->json([
@@ -155,7 +167,7 @@ class CustomerController extends Controller
      */
     public function show(Customer $customer)
     {
-        $customer->load('assignedUser', 'devices', 'invoices');
+        $customer->load('assignedUsers', 'devices', 'invoices');
         // Get all users that can be assigned (admin, manager, staff/field officer)
         $users = User::whereHas('roles', function ($query) {
             $query->whereIn('name', ['admin', 'manager', 'staff']);
@@ -180,9 +192,13 @@ class CustomerController extends Controller
             $query->whereIn('name', ['admin', 'manager', 'staff']);
         })->orderBy('name')->get();
 
+        // Get active packages
+        $packages = Package::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
+
         return response()->json([
             'html' => view('features.customers.partials.form', [
                 'users' => $users,
+                'packages' => $packages,
                 'customer' => $customer,
                 'formAction' => route('customers.update', $customer),
                 'formMethod' => 'PUT',
@@ -205,7 +221,8 @@ class CustomerController extends Controller
             }
 
             $housePhoto = $request->hasFile('house_photo') ? $request->file('house_photo') : null;
-            $this->customerService->update($customer, $validated, $housePhoto);
+            $identityPhoto = $request->hasFile('identity_photo') ? $request->file('identity_photo') : null;
+            $this->customerService->update($customer, $validated, $housePhoto, $identityPhoto);
 
             if ($request->ajax()) {
                 return response()->json([
@@ -275,18 +292,32 @@ class CustomerController extends Controller
         $request->validate([
             'customer_ids' => 'required|array',
             'customer_ids.*' => 'required|uuid|exists:customers,id',
-            'assigned_to' => 'nullable|uuid|exists:users,id',
+            'assigned_users' => 'nullable|array',
+            'assigned_users.*' => 'nullable|uuid|exists:users,id',
+            'assigned_to' => 'nullable|uuid|exists:users,id', // Backward compatibility
         ]);
 
         $customerIds = $request->customer_ids;
-        $assignedTo = $request->assigned_to ?: null;
+        $assignedUsers = $request->assigned_users ?? [];
+        
+        // Backward compatibility: handle single assigned_to
+        if (empty($assignedUsers) && $request->filled('assigned_to')) {
+            $assignedUsers = [$request->assigned_to];
+        }
+        
+        // Filter out null/empty values
+        $assignedUsers = array_filter($assignedUsers);
 
-        Customer::whereIn('id', $customerIds)
-            ->update(['assigned_to' => $assignedTo]);
+        $customers = Customer::whereIn('id', $customerIds)->get();
+        
+        foreach ($customers as $customer) {
+            $customer->assignedUsers()->sync($assignedUsers);
+        }
 
         $count = count($customerIds);
-        $message = $assignedTo 
-            ? "Berhasil menugaskan {$count} pelanggan ke staff."
+        $userCount = count($assignedUsers);
+        $message = !empty($assignedUsers)
+            ? "Berhasil menugaskan {$count} pelanggan ke {$userCount} staff."
             : "Berhasil menghapus penugasan dari {$count} pelanggan.";
 
         if ($request->ajax()) {

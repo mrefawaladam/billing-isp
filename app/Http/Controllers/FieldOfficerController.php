@@ -25,23 +25,25 @@ class FieldOfficerController extends Controller
         $user = Auth::user();
 
         // Get customers assigned to this field officer
-        $customers = Customer::where('assigned_to', $user->id)
-            ->where('active', true)
-            ->with(['invoices' => function($query) {
-                $query->latest()->limit(1);
-            }])
-            ->get();
+        $customers = Customer::whereHas('assignedUsers', function($query) use ($user) {
+            $query->where('users.id', $user->id);
+        })
+        ->where('active', true)
+        ->with(['invoices' => function($query) {
+            $query->latest()->limit(1);
+        }])
+        ->get();
 
         // Statistics
         $totalCustomers = $customers->count();
-        $unpaidInvoices = Invoice::whereHas('customer', function($query) use ($user) {
-            $query->where('assigned_to', $user->id);
+        $unpaidInvoices = Invoice::whereHas('customer.assignedUsers', function($query) use ($user) {
+            $query->where('users.id', $user->id);
         })
         ->whereIn('status', ['UNPAID', 'OVERDUE'])
         ->count();
 
-        $paidToday = Invoice::whereHas('customer', function($query) use ($user) {
-            $query->where('assigned_to', $user->id);
+        $paidToday = Invoice::whereHas('customer.assignedUsers', function($query) use ($user) {
+            $query->where('users.id', $user->id);
         })
         ->where('status', 'PAID')
         ->whereDate('paid_at', today())
@@ -62,11 +64,13 @@ class FieldOfficerController extends Controller
     {
         $user = Auth::user();
 
-        $query = Customer::where('assigned_to', $user->id)
-            ->where('active', true)
-            ->with(['invoices' => function($query) {
-                $query->latest()->limit(1);
-            }]);
+        $query = Customer::whereHas('assignedUsers', function($q) use ($user) {
+            $q->where('users.id', $user->id);
+        })
+        ->where('active', true)
+        ->with(['invoices' => function($query) {
+            $query->latest()->limit(1);
+        }]);
 
         // Filter by search
         if ($request->filled('search')) {
@@ -98,7 +102,7 @@ class FieldOfficerController extends Controller
         $user = Auth::user();
 
         // Verify customer is assigned to this field officer
-        if ($customer->assigned_to !== $user->id) {
+        if (!$customer->assignedUsers->contains($user->id)) {
             abort(403, 'Anda tidak memiliki akses ke pelanggan ini.');
         }
 
@@ -117,11 +121,13 @@ class FieldOfficerController extends Controller
         $user = Auth::user();
 
         // Get customers assigned to this field officer
-        $customers = Customer::where('assigned_to', $user->id)
-            ->where('active', true)
-            ->whereNotNull('lat')
-            ->whereNotNull('lng')
-            ->get();
+        $customers = Customer::whereHas('assignedUsers', function($q) use ($user) {
+            $q->where('users.id', $user->id);
+        })
+        ->where('active', true)
+        ->whereNotNull('lat')
+        ->whereNotNull('lng')
+        ->get();
 
         return view('features.field-officer.map', compact('customers'));
     }
@@ -133,14 +139,16 @@ class FieldOfficerController extends Controller
     {
         $user = Auth::user();
 
-        $customers = Customer::where('assigned_to', $user->id)
-            ->where('active', true)
-            ->whereNotNull('lat')
-            ->whereNotNull('lng')
-            ->with(['invoices' => function($query) {
-                $query->latest()->limit(1);
-            }])
-            ->get()
+        $customers = Customer::whereHas('assignedUsers', function($q) use ($user) {
+            $q->where('users.id', $user->id);
+        })
+        ->where('active', true)
+        ->whereNotNull('lat')
+        ->whereNotNull('lng')
+        ->with(['invoices' => function($query) {
+            $query->latest()->limit(1);
+        }])
+        ->get()
             ->map(function($customer) {
                 $latestInvoice = $customer->invoices->first();
 
@@ -206,7 +214,7 @@ class FieldOfficerController extends Controller
         $user = Auth::user();
 
         // Verify invoice belongs to customer assigned to this field officer
-        if ($invoice->customer->assigned_to !== $user->id) {
+        if (!$invoice->customer->assignedUsers->contains($user->id)) {
             abort(403, 'Anda tidak memiliki akses ke tagihan ini.');
         }
 
