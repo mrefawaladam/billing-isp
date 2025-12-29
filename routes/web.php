@@ -77,6 +77,8 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
         Route::get('/', [\App\Http\Controllers\WhatsAppNotificationController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\WhatsAppNotificationController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\WhatsAppNotificationController::class, 'store'])->name('store');
+        Route::get('/bulk-by-region', [\App\Http\Controllers\WhatsAppNotificationController::class, 'bulkByRegion'])->name('bulk-by-region');
+        Route::post('/bulk-by-region', [\App\Http\Controllers\WhatsAppNotificationController::class, 'sendBulkByRegion'])->name('bulk-by-region.send');
         Route::get('/{whatsapp}', [\App\Http\Controllers\WhatsAppNotificationController::class, 'show'])->name('show');
         Route::post('/{whatsapp}/resend', [\App\Http\Controllers\WhatsAppNotificationController::class, 'resend'])->name('resend');
         Route::post('/invoices/{invoice}/send', [\App\Http\Controllers\WhatsAppNotificationController::class, 'sendInvoice'])->name('invoice.send');

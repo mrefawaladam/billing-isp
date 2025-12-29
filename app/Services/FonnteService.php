@@ -194,10 +194,24 @@ class FonnteService
 
         if ($timeSinceLastSent < $this->delayBetweenMessages) {
             $waitTime = $this->delayBetweenMessages - $timeSinceLastSent;
+            Log::debug("Fonnte anti-ban delay: waiting {$waitTime} seconds", [
+                'time_since_last' => $timeSinceLastSent,
+                'delay_interval' => $this->delayBetweenMessages
+            ]);
             sleep($waitTime);
         }
 
         Cache::put('fonnte_last_sent', time(), now()->addMinutes(1));
+    }
+    
+    /**
+     * Get delay interval (for external use)
+     *
+     * @return int
+     */
+    public function getDelayInterval(): int
+    {
+        return $this->delayBetweenMessages;
     }
 
     /**

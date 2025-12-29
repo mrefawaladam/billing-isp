@@ -34,9 +34,14 @@
                         Lihat riwayat dan kirim pesan WhatsApp dari halaman ini.
                     </p>
                 </div>
-                <button type="button" class="btn btn-primary" id="btn-send-whatsapp">
-                    <i class="ti ti-brand-whatsapp me-1"></i> Kirim Pesan
-                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-success" id="btn-bulk-by-region">
+                        <i class="ti ti-map-pin me-1"></i> Kirim Berdasarkan Daerah
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn-send-whatsapp">
+                        <i class="ti ti-brand-whatsapp me-1"></i> Kirim Pesan
+                    </button>
+                </div>
             </div>
 
             <!-- Filters -->
@@ -156,6 +161,15 @@ $(document).ready(function() {
         table.draw();
     });
 
+    // Bulk by region button
+    $('#btn-bulk-by-region').on('click', function() {
+        $.get("{{ route('whatsapp.bulk-by-region') }}", function(response) {
+            $('#whatsappModalBody').html(response.html);
+            $('#whatsappModal').find('.modal-title').text('Kirim Tagihan Berdasarkan Daerah');
+            $('#whatsappModal').modal('show');
+        });
+    });
+
     // Send button
     $('#btn-send-whatsapp').on('click', function() {
         $.get("{{ route('whatsapp.create') }}", function(response) {
@@ -240,10 +254,32 @@ $(document).ready(function() {
         });
     }
 
-    // Form submit
+    // Form submit (for regular WhatsApp form)
     $(document).on('click', '#btn-submit-form', function() {
         let form = $('#whatsapp-form');
+        if (form.length === 0) {
+            // Try bulk by region form
+            form = $('#bulk-by-region-form');
+        }
+        
+        if (form.length === 0) return;
+        
         let formData = new FormData(form[0]);
+        let btn = $(this);
+        let originalText = btn.html();
+        
+        // Check if this is bulk by region form
+        let isBulkByRegion = form.attr('id') === 'bulk-by-region-form';
+        
+        // Disable button and show loading
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Mengirim...');
+        
+        // Show progress indicator for bulk by region
+        if (isBulkByRegion) {
+            $('#progress-alert').show();
+            $('#progress-bar').css('width', '10%').text('10%');
+            $('#progress-detail').text('Memulai pengiriman...');
+        }
 
         $.ajax({
             url: form.attr('action'),
@@ -251,16 +287,59 @@ $(document).ready(function() {
             data: formData,
             processData: false,
             contentType: false,
+            xhr: function() {
+                let xhr = new window.XMLHttpRequest();
+                
+                // Track upload progress for bulk by region
+                if (isBulkByRegion) {
+                    xhr.upload.addEventListener('progress', function(e) {
+                        if (e.lengthComputable) {
+                            let percentComplete = Math.round((e.loaded / e.total) * 50); // 50% for upload
+                            $('#progress-bar').css('width', percentComplete + '%').text(percentComplete + '%');
+                            $('#progress-detail').text('Mengirim data... ' + percentComplete + '%');
+                        }
+                    }, false);
+                }
+                
+                return xhr;
+            },
             success: function(response) {
+                // Hide progress indicator
+                $('#progress-alert').hide();
+                $('#progress-bar').css('width', '0%').text('0%');
+                
                 if (response.success) {
                     Toast.success(response.message);
                     table.draw();
                     $('#whatsappModal').modal('hide');
+                    
+                    // If bulk by region, show detailed results
+                    if (response.results) {
+                        let details = 'Detail Pengiriman:\n\n';
+                        details += 'Total Pelanggan: ' + response.results.total_customers + '\n';
+                        details += 'Berhasil: ' + response.results.sent + '\n';
+                        details += 'Gagal: ' + response.results.failed + '\n';
+                        details += 'Tidak ada tagihan: ' + response.results.no_invoice;
+                        
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                title: 'Pengiriman Selesai',
+                                html: '<pre style="text-align: left; white-space: pre-wrap;">' + details + '</pre>',
+                                icon: 'success',
+                                confirmButtonText: 'OK',
+                                width: '600px'
+                            });
+                        }
+                    }
                 } else {
                     Toast.error(response.message);
                 }
             },
             error: function(xhr) {
+                // Hide progress indicator
+                $('#progress-alert').hide();
+                $('#progress-bar').css('width', '0%').text('0%');
+                
                 if (xhr.status === 422) {
                     let errors = xhr.responseJSON.errors;
                     form.find('.is-invalid').removeClass('is-invalid');
@@ -278,6 +357,9 @@ $(document).ready(function() {
                 } else {
                     Toast.error(xhr.responseJSON?.message || 'Terjadi kesalahan');
                 }
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalText);
             }
         });
     });
