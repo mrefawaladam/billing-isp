@@ -59,9 +59,25 @@
                         Kelola data pelanggan, tambah, edit, dan hapus pelanggan dari halaman ini.
                     </p>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
                     <button type="button" class="btn btn-success" id="btn-bulk-assign" style="display: none;">
                         <i class="ti ti-user-check me-1"></i> Assign ke Staff
+                    </button>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="ti ti-file-export me-1"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('customers.export') }}" id="btn-export-excel">
+                                <i class="ti ti-file-excel me-2"></i> Export Excel
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ route('customers.export.template') }}" id="btn-download-template">
+                                <i class="ti ti-download me-2"></i> Download Template
+                            </a></li>
+                        </ul>
+                    </div>
+                    <button type="button" class="btn btn-warning" id="btn-import-excel">
+                        <i class="ti ti-file-import me-1"></i> Import Excel
                     </button>
                     <button type="button" class="btn btn-primary" id="btn-create-customer">
                         <i class="ti ti-plus me-1"></i> Tambah Pelanggan Baru
@@ -243,6 +259,56 @@
 }
 </style>
 @endpush
+
+<!-- Import Excel Modal -->
+<div class="modal fade" id="importExcelModal" tabindex="-1" aria-labelledby="importExcelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importExcelModalLabel">
+                    <i class="ti ti-file-import me-2"></i>Import Data Pelanggan dari Excel
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="import-excel-form" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="ti ti-info-circle me-2"></i>
+                        <strong>Petunjuk Import:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Download template terlebih dahulu untuk melihat format yang benar</li>
+                            <li>File harus berformat .xlsx atau .xls</li>
+                            <li>Maksimal ukuran file: 10MB</li>
+                            <li>Pastikan kolom header sesuai dengan template</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="import_file" class="form-label">Pilih File Excel <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="import_file" name="file" accept=".xlsx,.xls" required>
+                        <div class="form-text">Format: .xlsx atau .xls (maks. 10MB)</div>
+                        <div class="invalid-feedback d-none" id="import_file-error"></div>
+                    </div>
+
+                    <div id="import-progress" style="display: none;">
+                        <div class="progress mb-2">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
+                                Memproses import...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning" id="btn-submit-import">
+                        <i class="ti ti-upload me-1"></i> Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @push('scripts')
 @if(!isset($jqueryLoaded))
@@ -434,6 +500,103 @@ $(document).ready(function() {
     $('#btn-create-customer').on('click', function() {
         Modal.load('customerModal', "{{ route('customers.create') }}", 'Tambah Pelanggan Baru');
         $('#btn-submit-form').show();
+    });
+
+    // Export Excel - apply current filters
+    $('#btn-export-excel').on('click', function(e) {
+        e.preventDefault();
+        const type = $('#filter-type').val();
+        const assigned_to = $('#filter-assigned').val();
+        const active = $('#filter-active').val();
+        
+        let url = "{{ route('customers.export') }}?";
+        const params = [];
+        if (type) params.push('type=' + encodeURIComponent(type));
+        if (assigned_to) params.push('assigned_to=' + encodeURIComponent(assigned_to));
+        if (active) params.push('active=' + encodeURIComponent(active));
+        
+        if (params.length > 0) {
+            url += params.join('&');
+        }
+        
+        window.location.href = url;
+    });
+
+    // Import Excel button click
+    $('#btn-import-excel').on('click', function() {
+        $('#importExcelModal').modal('show');
+        $('#import-excel-form')[0].reset();
+        $('#import-progress').hide();
+        $('#import_file').removeClass('is-invalid');
+        $('#import_file-error').addClass('d-none');
+    });
+
+    // Import Excel form submit
+    $('#import-excel-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        const fileInput = $('#import_file')[0];
+        if (!fileInput.files || !fileInput.files[0]) {
+            $('#import_file').addClass('is-invalid');
+            $('#import_file-error').removeClass('d-none').text('Pilih file terlebih dahulu');
+            return;
+        }
+
+        const formData = new FormData(this);
+        const btn = $('#btn-submit-import');
+        const originalText = btn.html();
+        
+        // Show progress
+        $('#import-progress').show();
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Mengimport...');
+
+        $.ajax({
+            url: "{{ route('customers.import') }}",
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(response) {
+                $('#import-progress').hide();
+                btn.prop('disabled', false).html(originalText);
+                
+                if (response.success) {
+                    let message = response.message;
+                    if (response.fail_count > 0 && response.errors && response.errors.length > 0) {
+                        message += '\n\nError detail:\n' + response.errors.slice(0, 10).join('\n');
+                        if (response.errors.length > 10) {
+                            message += '\n... dan ' + (response.errors.length - 10) + ' error lainnya';
+                        }
+                    }
+                    
+                    Toast.success(message);
+                    $('#importExcelModal').modal('hide');
+                    customersTable.draw();
+                } else {
+                    Toast.error(response.message || 'Import gagal');
+                }
+            },
+            error: function(xhr) {
+                $('#import-progress').hide();
+                btn.prop('disabled', false).html(originalText);
+                
+                if (xhr.status === 422) {
+                    const errors = xhr.responseJSON?.errors;
+                    if (errors && errors.file) {
+                        $('#import_file').addClass('is-invalid');
+                        $('#import_file-error').removeClass('d-none').text(errors.file[0]);
+                    } else {
+                        Toast.error('Validasi gagal. Pastikan file sesuai format.');
+                    }
+                } else {
+                    const response = xhr.responseJSON;
+                    Toast.error(response?.message || 'Terjadi kesalahan saat import');
+                }
+            }
+        });
     });
 
     // Handle show button click

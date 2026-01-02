@@ -6,8 +6,12 @@ use App\Models\Customer;
 use App\Models\Package;
 use App\Models\User;
 use App\Services\CustomerService;
+use App\Exports\CustomerExport;
+use App\Exports\CustomerTemplateExport;
+use App\Imports\CustomerImport;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CustomerController extends Controller
 {
@@ -329,6 +333,123 @@ class CustomerController extends Controller
 
         return redirect()->route('customers.index')
             ->with('success', $message);
+    }
+
+    /**
+     * Export customers to Excel
+     */
+    public function export(Request $request)
+    {
+        $query = Customer::with(['package', 'assignedUsers']);
+
+        // Apply filters if any
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('assigned_to')) {
+            $query->whereHas('assignedUsers', function ($q) use ($request) {
+                $q->where('users.id', $request->assigned_to);
+            });
+        }
+
+        if ($request->filled('active')) {
+            $query->where('active', $request->active === '1' || $request->active === 1);
+        }
+
+        $customers = $query->get();
+        $filename = 'customers_export_' . date('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new CustomerExport($customers), $filename);
+    }
+
+    /**
+     * Download template Excel for import
+     */
+    public function downloadTemplate()
+    {
+        $filename = 'template_import_pelanggan.xlsx';
+        return Excel::download(new CustomerTemplateExport(), $filename);
+    }
+
+    /**
+     * Import customers from Excel
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls|max:10240', // Max 10MB
+        ]);
+
+        try {
+            \Log::info('Customer Import - Starting import process', [
+                'file_name' => $request->file('file')->getClientOriginalName(),
+                'file_size' => $request->file('file')->getSize(),
+                'mime_type' => $request->file('file')->getMimeType(),
+            ]);
+
+            $import = new CustomerImport();
+            Excel::import($import, $request->file('file'));
+
+            $successCount = $import->getSuccessCount();
+            $failCount = $import->getFailCount();
+            $errors = $import->getErrors();
+            $processedRows = $import->getProcessedRowsCount();
+
+            \Log::info('Customer Import - Import completed', [
+                'processed_rows' => $processedRows,
+                'success_count' => $successCount,
+                'fail_count' => $failCount,
+                'error_count' => count($errors),
+                'errors' => $errors,
+            ]);
+            
+            // If no rows were processed at all, log warning
+            if ($processedRows === 0) {
+                \Log::warning('Customer Import - No rows were processed. This might indicate a problem with file format or header row detection.');
+            }
+
+            $message = "Import selesai. Berhasil: {$successCount}, Gagal: {$failCount}";
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'success_count' => $successCount,
+                    'fail_count' => $failCount,
+                    'errors' => $errors
+                ]);
+            }
+
+            if ($failCount > 0 && !empty($errors)) {
+                return redirect()->back()
+                    ->with('warning', $message)
+                    ->with('import_errors', $errors);
+            }
+
+            return redirect()->route('customers.index')
+                ->with('success', $message);
+
+        } catch (\Exception $e) {
+            $errorMessage = 'Terjadi kesalahan saat import: ' . $e->getMessage();
+            
+            \Log::error('Customer Import - Fatal error', [
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->with('error', $errorMessage);
+        }
     }
 }
 
